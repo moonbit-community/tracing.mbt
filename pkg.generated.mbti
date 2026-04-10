@@ -1,0 +1,257 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/tracing"
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn[T : IntoValue] field(String, T) -> Field
+
+#callsite(autofill(loc))
+pub fn[G, X] spawn_child_span(@async.TaskGroup[G], TraceContext, Level, String, target? : String, fields? : ArrayView[Field], loc~ : SourceLoc, async (TraceContext) -> X, no_wait? : Bool, allow_failure? : Bool) -> @async.Task[X]
+
+#callsite(autofill(loc))
+pub fn[G, X] spawn_follower_span(@async.TaskGroup[G], TraceContext, Level, String, target? : String, fields? : ArrayView[Field], loc~ : SourceLoc, async (TraceContext) -> X, no_wait? : Bool, allow_failure? : Bool) -> @async.Task[X]
+
+pub fn[G, X] spawn_inherit(@async.TaskGroup[G], TraceContext, async (TraceContext) -> X, no_wait? : Bool, allow_failure? : Bool) -> @async.Task[X]
+
+// Errors
+
+// Types and methods
+pub struct Baggage {
+  // private fields
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn Baggage::empty() -> Self
+pub fn Baggage::entries(Self) -> Array[BaggageEntry]
+pub fn Baggage::from_header(StringView) -> Self?
+pub fn Baggage::get(Self, StringView) -> BaggageEntry?
+pub fn Baggage::header(Self) -> String
+pub fn Baggage::insert(Self, String, String, metadata? : String) -> Self?
+pub fn Baggage::is_empty(Self) -> Bool
+pub fn Baggage::remove(Self, StringView) -> Self
+pub impl Default for Baggage
+
+pub struct BaggageEntry {
+  name : String
+  value : String
+  metadata : String?
+} derive(Compare, Eq, Hash, @debug.Debug)
+
+pub struct Dispatch {
+  // private fields
+}
+pub fn Dispatch::fanout(ArrayView[Self]) -> Self
+pub fn Dispatch::filtered(Self, Filter) -> Self
+pub fn Dispatch::from_subscriber(&Subscriber) -> Self
+pub fn Dispatch::noop() -> Self
+
+pub struct EventRecord {
+  metadata : Metadata
+  trace_id : TraceId
+  span : SpanContext?
+  message : String?
+  fields : Array[Field]
+} derive(@debug.Debug)
+
+pub struct Field {
+  name : String
+  value : Value
+} derive(Compare, Eq, Hash, @debug.Debug)
+
+pub(all) enum Filter {
+  LevelFilter(Level)
+  TargetFilter(Map[String, Level])
+  AndFilter(Filter, Filter)
+} derive(@debug.Debug)
+
+pub(all) enum Level {
+  Trace
+  Debug
+  Info
+  Warn
+  Error
+} derive(Compare, Eq, Hash, @debug.Debug)
+
+pub struct Metadata {
+  kind : RecordKind
+  level : Level
+  name : String
+  target : String
+  loc : SourceLoc
+} derive(@debug.Debug)
+
+pub(all) enum RecordKind {
+  Span
+  Event
+} derive(Compare, Eq, Hash, @debug.Debug)
+
+#alias(SpanRef)
+pub struct SpanContext {
+  trace_id : TraceId
+  span_id : SpanId
+  trace_flags : TraceFlags
+  trace_state : TraceState
+  is_remote : Bool
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn SpanContext::invalid() -> Self
+pub fn SpanContext::is_valid(Self) -> Bool
+pub fn SpanContext::new(TraceId, SpanId, trace_flags? : TraceFlags, trace_state? : TraceState, is_remote? : Bool) -> Self
+
+pub struct SpanEnd {
+  span : SpanContext
+  status : SpanStatus
+  error : String?
+} derive(@debug.Debug)
+
+pub struct SpanHandle {
+  // private fields
+}
+pub fn SpanHandle::close(Self, status? : SpanStatus, error? : String) -> Bool
+pub fn SpanHandle::follows_from(Self, SpanContext) -> Bool
+pub fn SpanHandle::record(Self, ArrayView[Field]) -> Bool
+pub fn SpanHandle::span_context(Self) -> SpanContext?
+pub fn SpanHandle::span_ref(Self) -> SpanContext?
+
+pub struct SpanId {
+  // private fields
+} derive(Compare, Eq, Hash)
+pub fn SpanId::from_bytes(BytesView) -> Self?
+pub fn SpanId::from_hex(StringView) -> Self?
+pub fn SpanId::to_bytes(Self) -> Bytes
+pub fn SpanId::to_hex(Self) -> String
+pub impl Show for SpanId
+pub impl @debug.Debug for SpanId
+
+pub struct SpanLink {
+  span : SpanContext
+  follows_from : SpanContext
+} derive(@debug.Debug)
+
+pub struct SpanRecord {
+  span : SpanContext
+  fields : Array[Field]
+} derive(@debug.Debug)
+
+pub struct SpanStart {
+  metadata : Metadata
+  span : SpanContext
+  parent : SpanContext?
+  fields : Array[Field]
+} derive(@debug.Debug)
+
+pub(all) enum SpanStatus {
+  Ok
+  Error
+  Cancelled
+} derive(Compare, Eq, Hash, @debug.Debug)
+
+pub struct TraceContext {
+  // private fields
+}
+pub fn TraceContext::baggage(Self) -> Baggage
+pub fn TraceContext::current_span(Self) -> SpanContext?
+#callsite(autofill(loc))
+pub fn TraceContext::debug(Self, String, message? : String, target? : String, fields? : ArrayView[Field], loc~ : SourceLoc) -> Unit
+#callsite(autofill(loc))
+pub fn TraceContext::error(Self, String, message? : String, target? : String, fields? : ArrayView[Field], loc~ : SourceLoc) -> Unit
+#callsite(autofill(loc))
+pub fn TraceContext::event(Self, Level, String, message? : String, target? : String, fields? : ArrayView[Field], loc~ : SourceLoc) -> Unit
+#callsite(autofill(loc))
+pub fn TraceContext::info(Self, String, message? : String, target? : String, fields? : ArrayView[Field], loc~ : SourceLoc) -> Unit
+pub fn TraceContext::propagated_span(Self) -> SpanContext?
+pub fn TraceContext::root(Dispatch, TraceIdAllocator) -> Self
+pub fn TraceContext::root_with_parent(Dispatch, TraceIdAllocator, SpanContext, baggage? : Baggage) -> Self
+#callsite(autofill(loc))
+pub fn TraceContext::span(Self, Level, String, target? : String, fields? : ArrayView[Field], follows_from? : ArrayView[SpanContext], loc~ : SourceLoc) -> (SpanHandle, Self)
+#callsite(autofill(loc))
+pub fn TraceContext::trace(Self, String, message? : String, target? : String, fields? : ArrayView[Field], loc~ : SourceLoc) -> Unit
+#callsite(autofill(loc))
+pub fn TraceContext::warn(Self, String, message? : String, target? : String, fields? : ArrayView[Field], loc~ : SourceLoc) -> Unit
+pub fn TraceContext::with_baggage(Self, Baggage) -> Self
+#callsite(autofill(loc))
+pub async fn[X] TraceContext::with_span(Self, Level, String, target? : String, fields? : ArrayView[Field], follows_from? : ArrayView[SpanContext], loc~ : SourceLoc, async (Self) -> X) -> X
+
+pub struct TraceFlags {
+  // private fields
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn TraceFlags::is_sampled(Self) -> Bool
+pub fn TraceFlags::new(UInt) -> Self
+pub fn TraceFlags::not_sampled() -> Self
+pub fn TraceFlags::sampled() -> Self
+pub fn TraceFlags::to_uint(Self) -> UInt
+
+pub struct TraceId {
+  // private fields
+} derive(Compare, Eq, Hash)
+pub fn TraceId::from_bytes(BytesView) -> Self?
+pub fn TraceId::from_hex(StringView) -> Self?
+pub fn TraceId::to_bytes(Self) -> Bytes
+pub fn TraceId::to_hex(Self) -> String
+pub impl Show for TraceId
+pub impl @debug.Debug for TraceId
+
+pub struct TraceIdAllocator {
+  // private fields
+}
+pub fn TraceIdAllocator::new() -> Self
+pub fn TraceIdAllocator::new_seeded(UInt64) -> Self
+
+pub struct TraceState {
+  // private fields
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn TraceState::empty() -> Self
+pub fn TraceState::entries(Self) -> Array[(String, String)]
+pub fn TraceState::from_header(StringView) -> Self?
+pub fn TraceState::get(Self, StringView) -> String?
+pub fn TraceState::header(Self) -> String
+pub fn TraceState::insert(Self, String, String) -> Self?
+pub fn TraceState::is_empty(Self) -> Bool
+pub fn TraceState::remove(Self, StringView) -> Self
+pub impl Default for TraceState
+
+pub(all) enum Value {
+  Null
+  Bool(Bool)
+  Int(Int)
+  Int64(Int64)
+  UInt(UInt)
+  UInt64(UInt64)
+  Double(Double)
+  String(String)
+  Bytes(Bytes)
+  Array(Array[Value])
+  Object(Array[(String, Value)])
+} derive(Compare, Eq, Hash)
+pub fn Value::to_json_string(Self) -> String
+pub impl IntoValue for Value
+pub impl @debug.Debug for Value
+
+// Type aliases
+
+// Traits
+pub(open) trait IntoValue {
+  into_value(Self) -> Value
+}
+pub impl IntoValue for Bool
+pub impl IntoValue for Int
+pub impl IntoValue for Int64
+pub impl IntoValue for UInt
+pub impl IntoValue for UInt64
+pub impl IntoValue for Double
+pub impl IntoValue for String
+pub impl IntoValue for Bytes
+pub impl IntoValue for Array[Value]
+pub impl IntoValue for ArrayView[Value]
+pub impl IntoValue for BytesView
+pub impl IntoValue for StringView
+
+pub(open) trait Subscriber {
+  on_span_start(Self, SpanStart) -> Unit
+  on_span_record(Self, SpanRecord) -> Unit = _
+  on_event(Self, EventRecord) -> Unit
+  on_span_end(Self, SpanEnd) -> Unit
+  on_span_link(Self, SpanLink) -> Unit = _
+}
+

@@ -1,0 +1,14 @@
+import {
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/base64",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/random",
+  "moonbitlang/core/string",
+  "moonbitlang/async",
+}
+
+import {
+  "moonbitlang/async/io",
+  "moonbit-community/tracing/jsonl",
+} for "test"

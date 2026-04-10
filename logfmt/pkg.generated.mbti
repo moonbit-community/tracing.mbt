@@ -1,0 +1,59 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/tracing/logfmt"
+
+import {
+  "moonbit-community/tracing",
+  "moonbitlang/async",
+  "moonbitlang/async/io",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub async fn[X] with_logfmt_stderr(options? : LogfmtOptions, async (@tracing.TraceContext) -> X) -> X
+
+pub async fn[X] with_logfmt_stdout(options? : LogfmtOptions, async (@tracing.TraceContext) -> X) -> X
+
+pub async fn[X] with_logfmt_writer(&@io.Writer, options? : LogfmtOptions, async (@tracing.TraceContext) -> X) -> X
+
+// Errors
+pub suberror LogfmtHelperError {
+  UserAndShutdownFailed(Error, LogfmtRuntimeError)
+} derive(@debug.Debug)
+
+pub suberror LogfmtRuntimeError {
+  WriterFailed(String)
+  ChannelClosed(String)
+  TimedOut(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub struct LogfmtOptions {
+  record_queue_capacity : Int
+  control_queue_capacity : Int
+  ack_queue_capacity : Int
+  writer_buffer_size : Int
+  command_timeout_ms : Int
+  shutdown_timeout_ms : Int
+}
+pub fn LogfmtOptions::new(record_queue_capacity? : Int, control_queue_capacity? : Int, ack_queue_capacity? : Int, writer_buffer_size? : Int, command_timeout_ms? : Int, shutdown_timeout_ms? : Int) -> Self
+pub impl Default for LogfmtOptions
+
+pub struct LogfmtRuntime {
+  // private fields
+}
+pub fn LogfmtRuntime::dispatch(Self) -> @tracing.Dispatch
+pub async fn LogfmtRuntime::flush(Self) -> Unit
+pub async fn LogfmtRuntime::shutdown(Self) -> Unit
+pub fn[X] LogfmtRuntime::start_in(@async.TaskGroup[X], &@io.Writer, options? : LogfmtOptions) -> Self
+pub fn LogfmtRuntime::stats(Self) -> LogfmtStats
+
+pub struct LogfmtStats {
+  dropped_records : Int
+  writer_errors : Int
+  unclosed_spans : Int
+} derive(@debug.Debug)
+
+// Type aliases
+
+// Traits
+

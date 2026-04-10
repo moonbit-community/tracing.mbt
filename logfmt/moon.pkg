@@ -1,0 +1,16 @@
+import {
+  "moonbitlang/core/encoding/base64",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/set",
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+  "moonbitlang/async/io",
+  "moonbitlang/async/stdio",
+  "moonbit-community/tracing",
+}
+
+warnings = "-29"
+
+options(
+  targets: { "README.mbt.md": [ "native" ], "stdio.mbt": [ "native" ] },
+)
