@@ -425,6 +425,40 @@ async test "LogfmtRuntime quotes strings and preserves duplicate fields" {
 }
 
 ///|
+async test "LogfmtRuntime maps non-finite doubles to null consistently" {
+  let nan = 0.0 / 0.0
+  let pos_inf = 1.0 / 0.0
+  let neg_inf = -1.0 / 0.0
+  let writer = MemoryWriter::new()
+  let entries = @async.with_task_group(group => {
+    let runtime = LogfmtRuntime::start_in(group, writer)
+    let ctx = seeded_ctx(runtime.dispatch())
+    ctx.event(@tracing.Info, "non-finite", fields=[
+      @tracing.field("nan", @tracing.Double(nan)),
+      @tracing.field("pos_inf", @tracing.Double(pos_inf)),
+      @tracing.field(
+        "payload",
+        @tracing.Object([
+          ("neg_inf", @tracing.Double(neg_inf)),
+          ("finite", @tracing.Double(1.5)),
+        ]),
+      ),
+    ])
+    runtime.shutdown()
+    writer.entries()
+  })
+
+  assert_eq(1, entries.length())
+  let line = entries[0]
+  assert_eq(value_for(line, "field.nan"), Some("null"))
+  assert_eq(value_for(line, "field.pos__inf"), Some("null"))
+  assert_eq(
+    value_for(line, "field.payload"),
+    Some("{\"neg_inf\":null,\"finite\":1.5}"),
+  )
+}
+
+///|
 async test "LogfmtRuntime escapes field names without collisions" {
   let writer = MemoryWriter::new()
   let entries = @async.with_task_group(group => {

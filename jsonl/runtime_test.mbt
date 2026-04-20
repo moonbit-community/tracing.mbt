@@ -355,6 +355,50 @@ async test "with_json_writer encodes cancelled span ends precisely" {
 }
 
 ///|
+async test "with_json_writer maps non-finite doubles to null" {
+  let nan = 0.0 / 0.0
+  let pos_inf = 1.0 / 0.0
+  let neg_inf = -1.0 / 0.0
+  let writer = MemoryWriter::new()
+  with_json_writer(writer, ctx => {
+    ctx.event(@tracing.Info, "non-finite", fields=[
+      @tracing.field("nan", @tracing.Double(nan)),
+      @tracing.field("pos_inf", @tracing.Double(pos_inf)),
+      @tracing.field(
+        "payload",
+        @tracing.Object([
+          ("neg_inf", @tracing.Double(neg_inf)),
+          ("finite", @tracing.Double(1.5)),
+        ]),
+      ),
+    ])
+  })
+
+  let lines = writer.json_lines()
+  assert_eq(1, lines.length())
+  assert_true(
+    lines[0]
+    is Object(
+      {
+        "kind": "event",
+        "name": "non-finite",
+        "fields": Object(
+          {
+            "nan": Null,
+            "pos_inf": Null,
+            "payload": Object(
+              { "neg_inf": Null, "finite": Number(1.5, ..), .. }
+            ),
+            ..
+          }
+        ),
+        ..
+      }
+    ),
+  )
+}
+
+///|
 async test "with_json_writer encodes follows-from links precisely" {
   let writer = MemoryWriter::new()
   with_json_writer(writer, ctx => {

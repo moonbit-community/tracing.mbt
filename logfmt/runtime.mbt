@@ -184,6 +184,15 @@ fn append_field_name(builder : StringBuilder, name : String) -> Unit {
 }
 
 ///|
+fn append_double(builder : StringBuilder, value : Double) -> Unit {
+  if value.is_nan() || value.is_inf() {
+    builder.write_string("null")
+  } else {
+    builder.write_object(value)
+  }
+}
+
+///|
 fn append_value(builder : StringBuilder, value : @tracing.Value) -> Unit {
   match value {
     @tracing.Null => builder.write_string("null")
@@ -193,7 +202,7 @@ fn append_value(builder : StringBuilder, value : @tracing.Value) -> Unit {
     @tracing.Int64(value) => builder.write_string(value.to_string())
     @tracing.UInt(value) => builder.write_object(value)
     @tracing.UInt64(value) => builder.write_string(value.to_string())
-    @tracing.Double(value) => builder.write_object(value)
+    @tracing.Double(value) => append_double(builder, value)
     @tracing.String(value) => append_logfmt_string(builder, value)
     @tracing.Bytes(value) =>
       append_logfmt_string(builder, @base64.encode(value[:]))

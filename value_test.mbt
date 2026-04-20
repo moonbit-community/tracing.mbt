@@ -24,3 +24,28 @@ test "Value Debug stays JSON-like" {
     ),
   )
 }
+
+///|
+test "Value::to_json_string maps non-finite doubles to null" {
+  let nan = 0.0 / 0.0
+  let pos_inf = 1.0 / 0.0
+  let neg_inf = -1.0 / 0.0
+
+  assert_eq(@tracing.Double(nan).to_json_string(), "null")
+  assert_eq(@tracing.Double(pos_inf).to_json_string(), "null")
+  assert_eq(@tracing.Double(neg_inf).to_json_string(), "null")
+  assert_eq(
+    @tracing.Object([
+      ("scalar", @tracing.Double(nan)),
+      (
+        "items",
+        @tracing.Array([
+          @tracing.Double(pos_inf),
+          @tracing.Double(1.5),
+          @tracing.Double(neg_inf),
+        ]),
+      ),
+    ]).to_json_string(),
+    "{\"scalar\":null,\"items\":[null,1.5,null]}",
+  )
+}

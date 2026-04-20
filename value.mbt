@@ -89,6 +89,15 @@ fn append_json_string(builder : StringBuilder, value : String) -> Unit {
 }
 
 ///|
+fn append_json_double(builder : StringBuilder, value : Double) -> Unit {
+  if value.is_nan() || value.is_inf() {
+    builder.write_string("null")
+  } else {
+    builder.write_object(value)
+  }
+}
+
+///|
 fn Value::append_json(self : Value, builder : StringBuilder) -> Unit {
   match self {
     Null => builder.write_string("null")
@@ -97,7 +106,7 @@ fn Value::append_json(self : Value, builder : StringBuilder) -> Unit {
     Int64(value) => builder.write_string(value.to_string())
     UInt(value) => builder.write_object(value)
     UInt64(value) => builder.write_string(value.to_string())
-    Double(value) => builder.write_object(value)
+    Double(value) => append_json_double(builder, value)
     String(value) => append_json_string(builder, value)
     Bytes(value) => append_json_string(builder, @base64.encode(value[:]))
     Array(values) => {
