@@ -15,7 +15,7 @@ pub(all) enum Level {
 ///|
 /// Structured field values carried by spans and events.
 ///
-/// `Object` preserves insertion order and allows duplicate keys. This is
+/// `Object` preserves insertion order. This is
 /// important for logging pipelines that rely on stable field ordering.
 ///
 /// `Bytes` values are encoded by the formatter as base64 text.
@@ -31,7 +31,7 @@ pub(all) enum Value {
   Bytes(Bytes)
   Array(Array[Value])
   Object(Array[(String, Value)])
-} derive(Eq, Compare, Hash)
+} derive(Eq, Hash)
 
 ///|
 /// Conversion trait used by `field` and other convenience APIs.
@@ -44,7 +44,7 @@ pub(open) trait IntoValue {
 pub struct Field {
   name : String
   value : Value
-} derive(Eq, Compare, Hash, Debug)
+} derive(Eq, Hash, Debug)
 
 ///|
 /// Create a structured field by converting `value` into a tracing `Value`.

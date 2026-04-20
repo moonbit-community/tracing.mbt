@@ -58,7 +58,7 @@ pub struct EventRecord {
 pub struct Field {
   name : String
   value : Value
-} derive(Compare, Eq, Hash, @debug.Debug)
+} derive(Eq, Hash, @debug.Debug)
 
 pub(all) enum Filter {
   LevelFilter(Level)
@@ -223,7 +223,7 @@ pub(all) enum Value {
   Bytes(Bytes)
   Array(Array[Value])
   Object(Array[(String, Value)])
-} derive(Compare, Eq, Hash)
+} derive(Eq, Hash)
 pub fn Value::to_json_string(Self) -> String
 pub impl IntoValue for Value
 pub impl @debug.Debug for Value
