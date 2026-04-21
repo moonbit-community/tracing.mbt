@@ -373,7 +373,7 @@ async test "LogfmtRuntime encodes event and span lifecycle records" {
 }
 
 ///|
-async test "LogfmtRuntime quotes strings and preserves duplicate fields" {
+async test "LogfmtRuntime quotes strings and preserves duplicate tracing fields" {
   let writer = MemoryWriter::new()
   let entries = @async.with_task_group(group => {
     let runtime = LogfmtRuntime::start_in(group, writer)

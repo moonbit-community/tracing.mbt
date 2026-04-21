@@ -57,15 +57,25 @@ impl Subscriber for Capture with on_span_link(self, record) {
 ///|
 test "Value JSON encoding preserves order and scalar fidelity" {
   let encoded = @tracing.Object([
-    ("dup", @tracing.Int64(@string.parse_int64("9007199254740993"))),
-    ("dup", @tracing.UInt64(@string.parse_uint64("18446744073709551615"))),
+    ("int64", @tracing.Int64(@string.parse_int64("9007199254740993"))),
+    ("uint64", @tracing.UInt64(@string.parse_uint64("18446744073709551615"))),
     ("text", @tracing.String("line\n\"quoted\"")),
     ("bytes", @tracing.Bytes(b"hi")),
     ("items", @tracing.Array([@tracing.Bool(true), @tracing.Null])),
   ]).to_json_string()
   @debug.assert_eq(
-    "{\"dup\":9007199254740993,\"dup\":18446744073709551615,\"text\":\"line\\n\\\"quoted\\\"\",\"bytes\":\"aGk=\",\"items\":[true,null]}",
+    "{\"int64\":9007199254740993,\"uint64\":18446744073709551615,\"text\":\"line\\n\\\"quoted\\\"\",\"bytes\":\"aGk=\",\"items\":[true,null]}",
     encoded,
+  )
+}
+
+///|
+test "panic field rejects duplicate object field names" {
+  ignore(
+    field(
+      "payload",
+      @tracing.Object([("dup", @tracing.Int(1)), ("dup", @tracing.Int(2))]),
+    ),
   )
 }
 
