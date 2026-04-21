@@ -215,6 +215,9 @@ names and machine-readable payloads.
 implementations cover common scalars, bytes, arrays of `Value`, and `Value`
 itself.
 
+`@tracing.Object` preserves insertion order, and each object field name must be
+unique.
+
 ```mbt check
 ///|
 struct ReadmeUser {

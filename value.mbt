@@ -16,7 +16,8 @@ pub(all) enum Level {
 /// Structured field values carried by spans and events.
 ///
 /// `Object` preserves insertion order. This is
-/// important for logging pipelines that rely on stable field ordering.
+/// important for logging pipelines that rely on stable field ordering. Object
+/// field names must be unique within each object value.
 ///
 /// `Bytes` values are encoded by the formatter as base64 text.
 pub(all) enum Value {
@@ -49,7 +50,46 @@ pub struct Field {
 ///|
 /// Create a structured field by converting `value` into a tracing `Value`.
 pub fn[T : IntoValue] field(name : String, value : T) -> Field {
-  { name, value: value.into_value() }
+  let value = value.into_value()
+  value.assert_unique_object_fields("$")
+  { name, value }
+}
+
+///|
+fn Value::assert_unique_object_fields(self : Value, path : String) -> Unit {
+  match self {
+    Array(values) =>
+      for index = 0; index < values.length(); index = index + 1 {
+        values[index].assert_unique_object_fields("\{path}[\{index}]")
+      }
+    Object(entries) => {
+      let seen : Map[String, Bool] = {}
+      for index = 0; index < entries.length(); index = index + 1 {
+        let (name, value) = entries[index]
+        let entry_path = "\{path}.\{name}"
+        guard !seen.contains(name) else {
+          abort(
+            "tracing.Value::Object does not allow duplicate field names: \{entry_path}",
+          )
+        }
+        seen[name] = true
+        value.assert_unique_object_fields(entry_path)
+      }
+    }
+    _ => ()
+  }
+}
+
+///|
+fn Field::assert_unique_object_fields(self : Field) -> Unit {
+  self.value.assert_unique_object_fields("$")
+}
+
+///|
+fn validate_fields(fields : ArrayView[Field]) -> Unit {
+  for field in fields {
+    field.assert_unique_object_fields()
+  }
 }
 
 ///|
@@ -139,6 +179,7 @@ fn Value::append_json(self : Value, builder : StringBuilder) -> Unit {
 /// Encode a tracing value into JSON text without converting through the core
 /// `Json` AST.
 pub fn Value::to_json_string(self : Value) -> String {
+  self.assert_unique_object_fields("$")
   let builder = StringBuilder::new()
   self.append_json(builder)
   builder.to_string()
@@ -146,6 +187,7 @@ pub fn Value::to_json_string(self : Value) -> String {
 
 ///|
 fn Value::to_debug_repr(self : Value) -> Repr {
+  self.assert_unique_object_fields("$")
   match self {
     Null => Repr::literal("null")
     Bool(value) => Repr::bool(value)

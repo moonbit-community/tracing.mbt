@@ -106,6 +106,7 @@ pub fn SpanHandle::span_ref(self : SpanHandle) -> SpanContext? {
 pub fn SpanHandle::record(self : SpanHandle, fields : ArrayView[Field]) -> Bool {
   guard self.span is Some(span) else { return false }
   guard !self.closed.val else { return false }
+  validate_fields(fields)
   let record = { span, fields: fields.to_array() }
   for lane in self.lanes {
     lane.subscriber.on_span_record(record)
@@ -162,6 +163,7 @@ fn TraceContext::start_span(
   filtered_ctx : TraceContext,
   loc : SourceLoc,
 ) -> (SpanHandle, TraceContext) {
+  validate_fields(fields)
   let metadata = {
     kind: Span,
     level,
@@ -302,6 +304,7 @@ pub fn TraceContext::event(
   fields? : ArrayView[Field] = [],
   loc~ : SourceLoc,
 ) -> Unit {
+  validate_fields(fields)
   let metadata = {
     kind: Event,
     level,

@@ -2,7 +2,7 @@
 test "Value Debug stays JSON-like" {
   debug_inspect(
     @tracing.Object([
-      ("dup", @tracing.Int64(@string.parse_int64("9007199254740993"))),
+      ("int64", @tracing.Int64(@string.parse_int64("9007199254740993"))),
       ("text", @tracing.String("line\n\"quoted\"")),
       ("bytes", @tracing.Bytes(b"hi")),
       (
@@ -16,7 +16,7 @@ test "Value Debug stays JSON-like" {
     ]),
     content=(
       #|{
-      #|  "dup": 9007199254740993,
+      #|  "int64": 9007199254740993,
       #|  "text": "line\n\"quoted\"",
       #|  "bytes": "aGk=",
       #|  "items": [true, null, { "nested": 7 }],
@@ -47,5 +47,12 @@ test "Value::to_json_string maps non-finite doubles to null" {
       ),
     ]).to_json_string(),
     "{\"scalar\":null,\"items\":[null,1.5,null]}",
+  )
+}
+
+///|
+test "panic Value::to_json_string rejects duplicate object field names" {
+  ignore(
+    @tracing.Object([("dup", @tracing.Int(1)), ("dup", @tracing.Int(2))]).to_json_string(),
   )
 }
