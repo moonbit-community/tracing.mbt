@@ -11,7 +11,7 @@ struct Capture {
 
 ///|
 fn Capture::new() -> Capture {
-  { starts: Ref::new([]) }
+  { starts: Ref([]) }
 }
 
 ///|
@@ -39,12 +39,7 @@ struct MemoryWriter {
 
 ///|
 fn MemoryWriter::new(delay_ms? : Int = 0, fail_after? : Int) -> MemoryWriter {
-  {
-    output: Ref::new(StringBuilder::new()),
-    delay_ms,
-    fail_after,
-    writes: Ref::new(0),
-  }
+  { output: Ref(StringBuilder::new()), delay_ms, fail_after, writes: Ref(0) }
 }
 
 ///|
@@ -56,7 +51,7 @@ fn MemoryWriter::contents(self : MemoryWriter) -> String {
 fn MemoryWriter::lines(self : MemoryWriter) -> Array[String] {
   let lines : Array[String] = []
   for line in self.contents().split("\n") {
-    let line = line.to_string()
+    let line = line.to_owned()
     if line != "" {
       lines.push(line)
     }
@@ -117,7 +112,7 @@ async test "spawn_child_span preserves caller callsite across packages" {
       ignore(follower_task.wait())
     })
   })
-  assert_eq(3, capture.starts.val.length())
+  @debug.assert_eq(3, capture.starts.val.length())
   let child_start = if capture.starts.val[0].metadata.name == "child" {
     capture.starts.val[0]
   } else if capture.starts.val[1].metadata.name == "child" {
@@ -132,7 +127,7 @@ async test "spawn_child_span preserves caller callsite across packages" {
   } else {
     capture.starts.val[2]
   }
-  assert_eq(follower_start.metadata.target, child_start.metadata.target)
+  @debug.assert_eq(follower_start.metadata.target, child_start.metadata.target)
   let child_loc = child_start.metadata.loc.to_string()
   let follower_loc = follower_start.metadata.loc.to_string()
   assert_true(child_loc.contains("runtime_test.mbt"))
@@ -155,7 +150,7 @@ async test "with_json_writer emits JSON lines" {
     })
   })
   let lines = writer.json_lines()
-  assert_eq(7, lines.length())
+  @debug.assert_eq(7, lines.length())
   assert_true(
     lines[0]
     is Object(
@@ -281,7 +276,7 @@ async test "with_json_writer encodes error span ends precisely" {
   })
   assert_true(result is Err(UserFailed))
   let lines = writer.json_lines()
-  assert_eq(2, lines.length())
+  @debug.assert_eq(2, lines.length())
   let span_id = match lines[0] {
     Object(
       {
@@ -291,7 +286,7 @@ async test "with_json_writer encodes error span ends precisely" {
         "name": "error-span",
         "target": String(_),
         "loc": String(_),
-        "fields": Object({ .. }),
+        "fields": Object(_),
         ..
       }
     ) => span_id
@@ -307,7 +302,7 @@ async test "with_json_writer encodes error span ends precisely" {
         ..
       }
     ) => {
-      assert_eq(span_id, end_span_id)
+      @debug.assert_eq(span_id, end_span_id)
       assert_true(error_text.contains("UserFailed"))
     }
     _ => abort("expected error span_end")
@@ -325,7 +320,7 @@ async test "with_json_writer encodes cancelled span ends precisely" {
     )
   })
   let lines = writer.json_lines()
-  assert_eq(2, lines.length())
+  @debug.assert_eq(2, lines.length())
   let span_id = match lines[0] {
     Object(
       {
@@ -335,7 +330,7 @@ async test "with_json_writer encodes cancelled span ends precisely" {
         "name": "cancelled-span",
         "target": String(_),
         "loc": String(_),
-        "fields": Object({ .. }),
+        "fields": Object(_),
         ..
       }
     ) => span_id
@@ -349,7 +344,7 @@ async test "with_json_writer encodes cancelled span ends precisely" {
         "status": "cancelled",
         ..
       }
-    ) => assert_eq(span_id, end_span_id)
+    ) => @debug.assert_eq(span_id, end_span_id)
     _ => abort("expected cancelled span_end")
   }
 }
@@ -375,7 +370,7 @@ async test "with_json_writer maps non-finite doubles to null" {
   })
 
   let lines = writer.json_lines()
-  assert_eq(1, lines.length())
+  @debug.assert_eq(1, lines.length())
   assert_true(
     lines[0]
     is Object(
@@ -416,7 +411,7 @@ async test "with_json_writer encodes follows-from links precisely" {
     })
   })
   let lines = writer.json_lines()
-  assert_eq(5, lines.length())
+  @debug.assert_eq(5, lines.length())
   let parent_span_id = match lines[0] {
     Object(
       {
@@ -426,7 +421,7 @@ async test "with_json_writer encodes follows-from links precisely" {
         "name": "parent",
         "target": String(_),
         "loc": String(_),
-        "fields": Object({ .. }),
+        "fields": Object(_),
         ..
       }
     ) => span_id
@@ -441,7 +436,7 @@ async test "with_json_writer encodes follows-from links precisely" {
         "name": "follower",
         "target": String(_),
         "loc": String(_),
-        "fields": Object({ .. }),
+        "fields": Object(_),
         ..
       }
     ) => span_id
@@ -456,21 +451,21 @@ async test "with_json_writer encodes follows-from links precisely" {
         ..
       }
     ) => {
-      assert_eq(follower_span_id, link_span_id)
-      assert_eq(parent_span_id, parent_link_id)
+      @debug.assert_eq(follower_span_id, link_span_id)
+      @debug.assert_eq(parent_span_id, parent_link_id)
     }
     _ => abort("expected span_link")
   }
   match lines[3] {
     Object(
       { "kind": "span_end", "span_id": String(end_span_id), "status": "ok", .. }
-    ) => assert_eq(follower_span_id, end_span_id)
+    ) => @debug.assert_eq(follower_span_id, end_span_id)
     _ => abort("expected follower span_end")
   }
   match lines[4] {
     Object(
       { "kind": "span_end", "span_id": String(end_span_id), "status": "ok", .. }
-    ) => assert_eq(parent_span_id, end_span_id)
+    ) => @debug.assert_eq(parent_span_id, end_span_id)
     _ => abort("expected parent span_end")
   }
 }
@@ -484,7 +479,7 @@ async test "with_json_writer flushes accepted records on exception path" {
   })
   assert_true(result is Err(UserFailed))
   let lines = writer.json_lines()
-  assert_eq(1, lines.length())
+  @debug.assert_eq(1, lines.length())
   assert_true(
     lines[0]
     is Object(
@@ -528,7 +523,7 @@ async test "with_json_writer handles enclosing cancellation without hanging" {
       @async.sleep(100)
     })
   })
-  assert_eq(None, result)
+  @debug.assert_eq(None, result)
 }
 
 ///|
@@ -629,7 +624,7 @@ async test "JsonRuntime reports unclosed spans on shutdown" {
     runtime.shutdown()
     runtime
   })
-  assert_eq(1, runtime.stats().unclosed_spans)
+  @debug.assert_eq(1, runtime.stats().unclosed_spans)
 }
 
 ///|
@@ -659,8 +654,8 @@ async test "JsonRuntime drops new records after a writer failure" {
     ignore(try? runtime.shutdown())
     runtime
   })
-  assert_eq(1, runtime.stats().writer_errors)
-  assert_eq(1, runtime.stats().dropped_records)
+  @debug.assert_eq(1, runtime.stats().writer_errors)
+  @debug.assert_eq(1, runtime.stats().dropped_records)
 }
 
 ///|
@@ -693,7 +688,7 @@ async test "JsonRuntime concurrent flush calls do not steal acknowledgements" {
   })
   assert_true(first_result is Ok(_))
   assert_true(second_result is Ok(_))
-  assert_eq(0, stats.writer_errors)
+  @debug.assert_eq(0, stats.writer_errors)
   assert_true(writer.lines().length() > 0)
 }
 
@@ -732,7 +727,7 @@ async test "JsonRuntime concurrent flush and shutdown do not steal acknowledgeme
     Ok(_) => ()
     Err(err) => raise err
   }
-  assert_eq(0, stats.writer_errors)
+  @debug.assert_eq(0, stats.writer_errors)
   assert_true(writer.lines().length() > 0)
 }
 
@@ -765,7 +760,7 @@ async test "JsonRuntime concurrent shutdown is idempotent" {
   })
   assert_true(first_result is Ok(_))
   assert_true(second_result is Ok(_))
-  assert_eq(0, stats.writer_errors)
+  @debug.assert_eq(0, stats.writer_errors)
   assert_true(writer.lines().length() > 0)
 }
 

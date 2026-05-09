@@ -20,7 +20,7 @@ let splitmix64_mul1 : UInt64 = 0xBF58476D1CE4E5B9UL
 let splitmix64_mul2 : UInt64 = 0x94D049BB133111EBUL
 
 ///|
-let allocator_entropy_nonce : Ref[UInt64] = Ref::new(0UL)
+let allocator_entropy_nonce : Ref[UInt64] = Ref(0UL)
 
 ///|
 fn bytes_to_hex(bytes : BytesView) -> String {
@@ -159,7 +159,7 @@ pub fn TraceId::from_hex(hex : StringView) -> TraceId? {
 ///|
 pub fn TraceId::from_bytes(bytes : BytesView) -> TraceId? {
   guard bytes.length() == 16 else { return None }
-  Some({ raw: bytes.to_bytes() })
+  Some({ raw: bytes.to_owned() })
 }
 
 ///|
@@ -183,7 +183,7 @@ pub fn SpanId::from_hex(hex : StringView) -> SpanId? {
 ///|
 pub fn SpanId::from_bytes(bytes : BytesView) -> SpanId? {
   guard bytes.length() == 8 else { return None }
-  Some({ raw: bytes.to_bytes() })
+  Some({ raw: bytes.to_owned() })
 }
 
 ///|
@@ -262,7 +262,7 @@ pub fn TraceIdAllocator::new_seeded(seed : UInt64) -> TraceIdAllocator {
   guard seed <= max_int64_u64 else {
     abort("TraceIdAllocator seed must fit in Int64")
   }
-  { state: Counter(Ref::new(seed.reinterpret_as_int64())) }
+  { state: Counter(Ref(seed.reinterpret_as_int64())) }
 }
 
 ///|

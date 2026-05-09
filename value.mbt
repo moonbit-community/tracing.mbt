@@ -256,7 +256,7 @@ pub impl IntoValue for String with into_value(self) {
 
 ///|
 pub impl IntoValue for StringView with into_value(self) {
-  String(self.to_string())
+  String(self.to_owned())
 }
 
 ///|
@@ -266,7 +266,7 @@ pub impl IntoValue for Bytes with into_value(self) {
 
 ///|
 pub impl IntoValue for BytesView with into_value(self) {
-  Bytes(self.to_bytes())
+  Bytes(self.to_owned())
 }
 
 ///|
@@ -276,5 +276,5 @@ pub impl IntoValue for Array[Value] with into_value(self) {
 
 ///|
 pub impl IntoValue for ArrayView[Value] with into_value(self) {
-  Array(self.to_array())
+  Array(self.to_owned())
 }

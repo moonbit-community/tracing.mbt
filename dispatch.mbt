@@ -39,7 +39,7 @@ fn derive_target(loc : SourceLoc) -> String {
   let encoded = loc.to_string()
   match encoded.rev_find("@") {
     Some(index) if index + 1 < encoded.length() =>
-      encoded[index + 1:].to_string()
+      encoded[index + 1:].to_owned()
     _ => "unknown"
   }
 }

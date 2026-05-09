@@ -68,7 +68,7 @@ struct ReadmeSink {
 
 ///|
 fn ReadmeSink::new() -> ReadmeSink {
-  { writes: Ref::new(0) }
+  { writes: Ref(0) }
 }
 
 ///|
@@ -242,7 +242,7 @@ test "fields accept custom values" {
     ("ok", @tracing.Bool(true)),
     ("user", user.into_value()),
   ])
-  assert_eq(
+  @debug.assert_eq(
     "{\"ok\":true,\"user\":{\"id\":7,\"name\":\"alice\"}}",
     payload.to_json_string(),
   )

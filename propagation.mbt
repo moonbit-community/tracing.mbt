@@ -215,7 +215,7 @@ pub fn TraceState::entries(self : TraceState) -> Array[(String, String)] {
 pub fn TraceState::get(self : TraceState, key : StringView) -> String? {
   for entry in self.entries {
     let (entry_key, entry_value) = entry
-    if entry_key == key.to_string() {
+    if entry_key == key.to_owned() {
       return Some(entry_value)
     }
   }
@@ -253,9 +253,9 @@ pub fn TraceState::from_header(header : StringView) -> TraceState? {
     let value = value.trim()
     guard valid_trace_state_key(key) else { return None }
     guard valid_trace_state_value(value) else { return None }
-    guard !seen.contains(key.to_string()) else { return None }
-    entries.push((key.to_string(), value.to_string()))
-    seen[key.to_string()] = true
+    guard !seen.contains(key.to_owned()) else { return None }
+    entries.push((key.to_owned(), value.to_owned()))
+    seen[key.to_owned()] = true
   }
   guard entries.length() <= trace_state_limit else { return None }
   Some({ entries, })
@@ -283,7 +283,7 @@ pub fn TraceState::insert(
 pub fn TraceState::remove(self : TraceState, key : StringView) -> TraceState {
   let entries : Array[(String, String)] = []
   for entry in self.entries {
-    if entry.0 != key.to_string() {
+    if entry.0 != key.to_owned() {
       entries.push(entry)
     }
   }
@@ -342,7 +342,7 @@ pub fn Baggage::entries(self : Baggage) -> Array[BaggageEntry] {
 ///|
 pub fn Baggage::get(self : Baggage, name : StringView) -> BaggageEntry? {
   for entry in self.entries {
-    if entry.name == name.to_string() {
+    if entry.name == name.to_owned() {
       return Some(entry)
     }
   }
@@ -382,7 +382,7 @@ pub fn Baggage::from_header(header : StringView) -> Baggage? {
     guard !item.is_empty() else { return None }
     let (pair, metadata) = match item.find(";") {
       Some(index) =>
-        (item[:index].trim(), Some(item[index + 1:].trim().to_string()))
+        (item[:index].trim(), Some(item[index + 1:].trim().to_owned()))
       None => (item, None)
     }
     guard pair.split_once("=") is Some((name, encoded_value)) else {
@@ -391,13 +391,13 @@ pub fn Baggage::from_header(header : StringView) -> Baggage? {
     let name = name.trim()
     let encoded_value = encoded_value.trim()
     guard valid_baggage_name(name) else { return None }
-    guard !seen.contains(name.to_string()) else { return None }
+    guard !seen.contains(name.to_owned()) else { return None }
     guard percent_decode(encoded_value) is Some(value) else { return None }
     guard metadata is None || valid_baggage_metadata(metadata.unwrap()) else {
       return None
     }
-    entries.push({ name: name.to_string(), value, metadata })
-    seen[name.to_string()] = true
+    entries.push({ name: name.to_owned(), value, metadata })
+    seen[name.to_owned()] = true
   }
   baggage_with_entries(entries)
 }
@@ -426,7 +426,7 @@ pub fn Baggage::insert(
 pub fn Baggage::remove(self : Baggage, name : StringView) -> Baggage {
   let entries : Array[BaggageEntry] = []
   for entry in self.entries {
-    if entry.name != name.to_string() {
+    if entry.name != name.to_owned() {
       entries.push(entry)
     }
   }

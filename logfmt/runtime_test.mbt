@@ -11,7 +11,7 @@ struct Capture {
 
 ///|
 fn Capture::new() -> Capture {
-  { starts: Ref::new([]) }
+  { starts: Ref([]) }
 }
 
 ///|
@@ -42,12 +42,7 @@ struct MemoryWriter {
 
 ///|
 fn MemoryWriter::new(delay_ms? : Int = 0, fail_after? : Int) -> MemoryWriter {
-  {
-    output: Ref::new(StringBuilder::new()),
-    delay_ms,
-    fail_after,
-    writes: Ref::new(0),
-  }
+  { output: Ref(StringBuilder::new()), delay_ms, fail_after, writes: Ref(0) }
 }
 
 ///|
@@ -59,7 +54,7 @@ fn MemoryWriter::contents(self : MemoryWriter) -> String {
 fn MemoryWriter::lines(self : MemoryWriter) -> Array[String] {
   let lines : Array[String] = []
   for line in self.contents().split("\n") {
-    let line = line.to_string()
+    let line = line.to_owned()
     if line != "" {
       lines.push(line)
     }
@@ -259,7 +254,7 @@ async test "spawn_child_span preserves caller callsite across packages" {
       ignore(follower_task.wait())
     })
   })
-  assert_eq(3, capture.starts.val.length())
+  @debug.assert_eq(3, capture.starts.val.length())
   let child_start = if capture.starts.val[0].metadata.name == "child" {
     capture.starts.val[0]
   } else if capture.starts.val[1].metadata.name == "child" {
@@ -274,7 +269,7 @@ async test "spawn_child_span preserves caller callsite across packages" {
   } else {
     capture.starts.val[2]
   }
-  assert_eq(follower_start.metadata.target, child_start.metadata.target)
+  @debug.assert_eq(follower_start.metadata.target, child_start.metadata.target)
   let child_loc = child_start.metadata.loc.to_string()
   let follower_loc = follower_start.metadata.loc.to_string()
   assert_true(child_loc.contains("runtime_test.mbt"))
@@ -317,59 +312,59 @@ async test "LogfmtRuntime encodes event and span lifecycle records" {
     writer.entries()
   })
 
-  assert_eq(5, entries.length())
+  @debug.assert_eq(5, entries.length())
 
   let ready = entries[0]
-  assert_eq(keys(ready), [
+  @debug.assert_eq(keys(ready), [
     "kind", "trace_id", "level", "name", "target", "loc", "message", "field.worker",
   ])
-  assert_eq(value_for(ready, "kind"), Some("event"))
-  assert_eq(
+  @debug.assert_eq(value_for(ready, "kind"), Some("event"))
+  @debug.assert_eq(
     value_for(ready, "trace_id"),
     Some("00000000000000000000000000000001"),
   )
-  assert_eq(value_for(ready, "level"), Some("info"))
-  assert_eq(value_for(ready, "name"), Some("ready"))
-  assert_eq(value_for(ready, "target"), Some("app"))
+  @debug.assert_eq(value_for(ready, "level"), Some("info"))
+  @debug.assert_eq(value_for(ready, "name"), Some("ready"))
+  @debug.assert_eq(value_for(ready, "target"), Some("app"))
   assert_true(value_for(ready, "loc").unwrap().contains("event-ready"))
-  assert_eq(value_for(ready, "message"), Some("booting"))
-  assert_eq(value_for(ready, "field.worker"), Some("1"))
+  @debug.assert_eq(value_for(ready, "message"), Some("booting"))
+  @debug.assert_eq(value_for(ready, "field.worker"), Some("1"))
 
   let started = entries[1]
   let span_id = value_for(started, "span_id").unwrap()
-  assert_eq(value_for(started, "kind"), Some("span_start"))
-  assert_eq(
+  @debug.assert_eq(value_for(started, "kind"), Some("span_start"))
+  @debug.assert_eq(
     value_for(started, "trace_id"),
     Some("00000000000000000000000000000001"),
   )
-  assert_eq(value_for(started, "level"), Some("info"))
-  assert_eq(value_for(started, "name"), Some("request"))
-  assert_eq(value_for(started, "target"), Some("http"))
+  @debug.assert_eq(value_for(started, "level"), Some("info"))
+  @debug.assert_eq(value_for(started, "name"), Some("request"))
+  @debug.assert_eq(value_for(started, "target"), Some("http"))
   assert_true(value_for(started, "loc").unwrap().contains("span-request"))
-  assert_eq(value_for(started, "field.request__id"), Some("req-1"))
+  @debug.assert_eq(value_for(started, "field.request__id"), Some("req-1"))
 
   let slow = entries[2]
-  assert_eq(value_for(slow, "kind"), Some("event"))
-  assert_eq(
+  @debug.assert_eq(value_for(slow, "kind"), Some("event"))
+  @debug.assert_eq(
     value_for(slow, "trace_id"),
     Some("00000000000000000000000000000001"),
   )
-  assert_eq(value_for(slow, "span_id"), Some(span_id))
-  assert_eq(value_for(slow, "level"), Some("warn"))
-  assert_eq(value_for(slow, "name"), Some("slow"))
-  assert_eq(value_for(slow, "message"), Some("retrying"))
-  assert_eq(value_for(slow, "field.cached"), Some("false"))
+  @debug.assert_eq(value_for(slow, "span_id"), Some(span_id))
+  @debug.assert_eq(value_for(slow, "level"), Some("warn"))
+  @debug.assert_eq(value_for(slow, "name"), Some("slow"))
+  @debug.assert_eq(value_for(slow, "message"), Some("retrying"))
+  @debug.assert_eq(value_for(slow, "field.cached"), Some("false"))
 
   let recorded = entries[3]
-  assert_eq(value_for(recorded, "kind"), Some("span_record"))
-  assert_eq(value_for(recorded, "span_id"), Some(span_id))
-  assert_eq(value_for(recorded, "field.rows"), Some("3"))
+  @debug.assert_eq(value_for(recorded, "kind"), Some("span_record"))
+  @debug.assert_eq(value_for(recorded, "span_id"), Some(span_id))
+  @debug.assert_eq(value_for(recorded, "field.rows"), Some("3"))
 
   let ended = entries[4]
-  assert_eq(value_for(ended, "kind"), Some("span_end"))
-  assert_eq(value_for(ended, "span_id"), Some(span_id))
-  assert_eq(value_for(ended, "status"), Some("error"))
-  assert_eq(value_for(ended, "error"), Some("timeout"))
+  @debug.assert_eq(value_for(ended, "kind"), Some("span_end"))
+  @debug.assert_eq(value_for(ended, "span_id"), Some(span_id))
+  @debug.assert_eq(value_for(ended, "status"), Some("error"))
+  @debug.assert_eq(value_for(ended, "error"), Some("timeout"))
 }
 
 ///|
@@ -408,20 +403,20 @@ async test "LogfmtRuntime quotes strings and preserves duplicate tracing fields"
     writer.entries()
   })
 
-  assert_eq(1, entries.length())
+  @debug.assert_eq(1, entries.length())
   let line = entries[0]
-  assert_eq(keys(line), [
+  @debug.assert_eq(keys(line), [
     "kind", "trace_id", "level", "name", "target", "loc", "message", "field.user_u20_id_u2f_x",
     "field.bytes", "field.items", "field.payload", "field.nothing", "field.dup",
     "field.dup",
   ])
-  assert_eq(value_for(line, "message"), Some("line\n\"quoted\""))
-  assert_eq(value_for(line, "field.user_u20_id_u2f_x"), Some("req 1"))
-  assert_eq(value_for(line, "field.bytes"), Some("aGk="))
-  assert_eq(value_for(line, "field.items"), Some("[1,\"two\",null]"))
-  assert_eq(value_for(line, "field.payload"), Some("{\"ok\":true}"))
-  assert_eq(value_for(line, "field.nothing"), Some("null"))
-  assert_eq(values_for(line, "field.dup"), ["1", "2"])
+  @debug.assert_eq(value_for(line, "message"), Some("line\n\"quoted\""))
+  @debug.assert_eq(value_for(line, "field.user_u20_id_u2f_x"), Some("req 1"))
+  @debug.assert_eq(value_for(line, "field.bytes"), Some("aGk="))
+  @debug.assert_eq(value_for(line, "field.items"), Some("[1,\"two\",null]"))
+  @debug.assert_eq(value_for(line, "field.payload"), Some("{\"ok\":true}"))
+  @debug.assert_eq(value_for(line, "field.nothing"), Some("null"))
+  @debug.assert_eq(values_for(line, "field.dup"), ["1", "2"])
 }
 
 ///|
@@ -448,11 +443,11 @@ async test "LogfmtRuntime maps non-finite doubles to null consistently" {
     writer.entries()
   })
 
-  assert_eq(1, entries.length())
+  @debug.assert_eq(1, entries.length())
   let line = entries[0]
-  assert_eq(value_for(line, "field.nan"), Some("null"))
-  assert_eq(value_for(line, "field.pos__inf"), Some("null"))
-  assert_eq(
+  @debug.assert_eq(value_for(line, "field.nan"), Some("null"))
+  @debug.assert_eq(value_for(line, "field.pos__inf"), Some("null"))
+  @debug.assert_eq(
     value_for(line, "field.payload"),
     Some("{\"neg_inf\":null,\"finite\":1.5}"),
   )
@@ -475,13 +470,13 @@ async test "LogfmtRuntime escapes field names without collisions" {
     writer.entries()
   })
 
-  assert_eq(1, entries.length())
+  @debug.assert_eq(1, entries.length())
   let line = entries[0]
-  assert_eq(value_for(line, "field.user_u20_id"), Some("1"))
-  assert_eq(value_for(line, "field.user_u2f_id"), Some("2"))
-  assert_eq(value_for(line, "field.user__id"), Some("3"))
-  assert_eq(value_for(line, "field._empty"), Some("4"))
-  assert_eq(value_for(line, "field._u4e2d_"), Some("5"))
+  @debug.assert_eq(value_for(line, "field.user_u20_id"), Some("1"))
+  @debug.assert_eq(value_for(line, "field.user_u2f_id"), Some("2"))
+  @debug.assert_eq(value_for(line, "field.user__id"), Some("3"))
+  @debug.assert_eq(value_for(line, "field._empty"), Some("4"))
+  @debug.assert_eq(value_for(line, "field._u4e2d_"), Some("5"))
 }
 
 ///|
@@ -502,15 +497,15 @@ async test "with_logfmt_writer preserves error span ends precisely" {
   assert_true(result is Err(UserFailed))
 
   let entries = writer.entries()
-  assert_eq(2, entries.length())
+  @debug.assert_eq(2, entries.length())
   let started = entries[0]
   let ended = entries[1]
   let span_id = value_for(started, "span_id").unwrap()
-  assert_eq(value_for(started, "kind"), Some("span_start"))
-  assert_eq(value_for(started, "name"), Some("error-span"))
-  assert_eq(value_for(ended, "kind"), Some("span_end"))
-  assert_eq(value_for(ended, "span_id"), Some(span_id))
-  assert_eq(value_for(ended, "status"), Some("error"))
+  @debug.assert_eq(value_for(started, "kind"), Some("span_start"))
+  @debug.assert_eq(value_for(started, "name"), Some("error-span"))
+  @debug.assert_eq(value_for(ended, "kind"), Some("span_end"))
+  @debug.assert_eq(value_for(ended, "span_id"), Some(span_id))
+  @debug.assert_eq(value_for(ended, "status"), Some("error"))
   assert_true(value_for(ended, "error").unwrap().contains("UserFailed"))
 }
 
@@ -526,14 +521,14 @@ async test "with_logfmt_writer preserves cancelled span ends precisely" {
   })
 
   let entries = writer.entries()
-  assert_eq(2, entries.length())
+  @debug.assert_eq(2, entries.length())
   let started = entries[0]
   let ended = entries[1]
-  assert_eq(value_for(started, "kind"), Some("span_start"))
-  assert_eq(value_for(started, "name"), Some("cancelled-span"))
-  assert_eq(value_for(ended, "kind"), Some("span_end"))
-  assert_eq(value_for(ended, "span_id"), value_for(started, "span_id"))
-  assert_eq(value_for(ended, "status"), Some("cancelled"))
+  @debug.assert_eq(value_for(started, "kind"), Some("span_start"))
+  @debug.assert_eq(value_for(started, "name"), Some("cancelled-span"))
+  @debug.assert_eq(value_for(ended, "kind"), Some("span_end"))
+  @debug.assert_eq(value_for(ended, "span_id"), value_for(started, "span_id"))
+  @debug.assert_eq(value_for(ended, "status"), Some("cancelled"))
 }
 
 ///|
@@ -555,7 +550,7 @@ async test "with_logfmt_writer encodes follows-from links precisely" {
   })
 
   let entries = writer.entries()
-  assert_eq(5, entries.length())
+  @debug.assert_eq(5, entries.length())
   let parent_started = entries[0]
   let follower_started = entries[1]
   let linked = entries[2]
@@ -563,13 +558,16 @@ async test "with_logfmt_writer encodes follows-from links precisely" {
   let parent_ended = entries[4]
   let parent_span_id = value_for(parent_started, "span_id").unwrap()
   let follower_span_id = value_for(follower_started, "span_id").unwrap()
-  assert_eq(value_for(parent_started, "name"), Some("parent"))
-  assert_eq(value_for(follower_started, "name"), Some("follower"))
-  assert_eq(value_for(linked, "kind"), Some("span_link"))
-  assert_eq(value_for(linked, "span_id"), Some(follower_span_id))
-  assert_eq(value_for(linked, "follows_from_span_id"), Some(parent_span_id))
-  assert_eq(value_for(follower_ended, "span_id"), Some(follower_span_id))
-  assert_eq(value_for(parent_ended, "span_id"), Some(parent_span_id))
+  @debug.assert_eq(value_for(parent_started, "name"), Some("parent"))
+  @debug.assert_eq(value_for(follower_started, "name"), Some("follower"))
+  @debug.assert_eq(value_for(linked, "kind"), Some("span_link"))
+  @debug.assert_eq(value_for(linked, "span_id"), Some(follower_span_id))
+  @debug.assert_eq(
+    value_for(linked, "follows_from_span_id"),
+    Some(parent_span_id),
+  )
+  @debug.assert_eq(value_for(follower_ended, "span_id"), Some(follower_span_id))
+  @debug.assert_eq(value_for(parent_ended, "span_id"), Some(parent_span_id))
 }
 
 ///|
@@ -582,9 +580,9 @@ async test "with_logfmt_writer flushes accepted records on exception path" {
   assert_true(result is Err(UserFailed))
 
   let entries = writer.entries()
-  assert_eq(1, entries.length())
-  assert_eq(value_for(entries[0], "kind"), Some("event"))
-  assert_eq(value_for(entries[0], "name"), Some("before-fail"))
+  @debug.assert_eq(1, entries.length())
+  @debug.assert_eq(value_for(entries[0], "kind"), Some("event"))
+  @debug.assert_eq(value_for(entries[0], "name"), Some("before-fail"))
 }
 
 ///|
@@ -613,7 +611,7 @@ async test "with_logfmt_writer handles enclosing cancellation without hanging" {
       @async.sleep(100)
     })
   })
-  assert_eq(None, result)
+  @debug.assert_eq(None, result)
 }
 
 ///|
@@ -686,8 +684,8 @@ async test "LogfmtRuntime flush still works when the record queue is saturated" 
   let entries = writer.entries()
   assert_true(entries.length() > 0)
   for line in entries {
-    assert_eq(value_for(line, "kind"), Some("event"))
-    assert_eq(value_for(line, "name"), Some("burst"))
+    @debug.assert_eq(value_for(line, "kind"), Some("event"))
+    @debug.assert_eq(value_for(line, "name"), Some("burst"))
   }
 }
 
@@ -701,7 +699,7 @@ async test "LogfmtRuntime reports unclosed spans on shutdown" {
     runtime.shutdown()
     runtime
   })
-  assert_eq(1, runtime.stats().unclosed_spans)
+  @debug.assert_eq(1, runtime.stats().unclosed_spans)
 }
 
 ///|
@@ -731,8 +729,8 @@ async test "LogfmtRuntime drops new records after a writer failure" {
     ignore(try? runtime.shutdown())
     runtime
   })
-  assert_eq(1, runtime.stats().writer_errors)
-  assert_eq(1, runtime.stats().dropped_records)
+  @debug.assert_eq(1, runtime.stats().writer_errors)
+  @debug.assert_eq(1, runtime.stats().dropped_records)
 }
 
 ///|
@@ -765,7 +763,7 @@ async test "LogfmtRuntime concurrent flush calls do not steal acknowledgements" 
   })
   assert_true(first_result is Ok(_))
   assert_true(second_result is Ok(_))
-  assert_eq(0, stats.writer_errors)
+  @debug.assert_eq(0, stats.writer_errors)
   assert_true(writer.lines().length() > 0)
 }
 
@@ -804,7 +802,7 @@ async test "LogfmtRuntime concurrent flush and shutdown do not steal acknowledge
     Ok(_) => ()
     Err(err) => raise err
   }
-  assert_eq(0, stats.writer_errors)
+  @debug.assert_eq(0, stats.writer_errors)
   assert_true(writer.lines().length() > 0)
 }
 
@@ -837,7 +835,7 @@ async test "LogfmtRuntime concurrent shutdown is idempotent" {
   })
   assert_true(first_result is Ok(_))
   assert_true(second_result is Ok(_))
-  assert_eq(0, stats.writer_errors)
+  @debug.assert_eq(0, stats.writer_errors)
   assert_true(writer.lines().length() > 0)
 }
 

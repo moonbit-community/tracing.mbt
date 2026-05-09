@@ -769,12 +769,12 @@ pub fn[X] LogfmtRuntime::start_in(
     kind=@aqueue.Blocking(options.ack_queue_capacity),
   )
   let wake_queue = @aqueue.Queue::new(kind=@aqueue.DiscardLatest(1))
-  let dropped_records = Ref::new(0)
-  let writer_errors = Ref::new(0)
-  let writer_error_text = Ref::new(None)
-  let unclosed_spans = Ref::new(0)
-  let accepting = Ref::new(true)
-  let open_spans = Ref::new(@set.new())
+  let dropped_records = Ref(0)
+  let writer_errors = Ref(0)
+  let writer_error_text = Ref(None)
+  let unclosed_spans = Ref(0)
+  let accepting = Ref(true)
+  let open_spans = Ref(Set([]))
   let subscriber = {
     record_queue,
     wake_queue,
@@ -795,12 +795,12 @@ pub fn[X] LogfmtRuntime::start_in(
     ack_queue,
     wake_queue,
     control_gate: @async.Semaphore::new(1),
-    next_command_id: Ref::new(0L),
+    next_command_id: Ref(0L),
     dropped_records,
     writer_errors,
     unclosed_spans,
     accepting,
-    shutdown_state: Ref::new(Running),
+    shutdown_state: Ref(Running),
     command_timeout_ms: options.command_timeout_ms,
     shutdown_timeout_ms: options.shutdown_timeout_ms,
   }
