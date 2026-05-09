@@ -53,8 +53,8 @@ fn new_trace_shared(
     root_parent,
     trace_flags,
     trace_state,
-    trace_id: Ref::new(trace_id),
-    next_span_id: Ref::new(0L),
+    trace_id: Ref(trace_id),
+    next_span_id: Ref(0L),
   }
 }
 
@@ -77,12 +77,12 @@ fn TraceContext::ensure_trace_id(self : TraceContext) -> TraceId {
 
 ///|
 fn SpanHandle::disabled() -> SpanHandle {
-  { span: None, lanes: [], closed: Ref::new(true) }
+  { span: None, lanes: [], closed: Ref(true) }
 }
 
 ///|
 fn SpanHandle::enabled(span : SpanContext, lanes : Array[Lane]) -> SpanHandle {
-  { span: Some(span), lanes, closed: Ref::new(false) }
+  { span: Some(span), lanes, closed: Ref(false) }
 }
 
 ///|
@@ -107,7 +107,7 @@ pub fn SpanHandle::record(self : SpanHandle, fields : ArrayView[Field]) -> Bool 
   guard self.span is Some(span) else { return false }
   guard !self.closed.val else { return false }
   validate_fields(fields)
-  let record = { span, fields: fields.to_array() }
+  let record = { span, fields: fields.to_owned() }
   for lane in self.lanes {
     lane.subscriber.on_span_record(record)
   }
@@ -182,7 +182,7 @@ fn TraceContext::start_span(
       trace_flags=self.shared.trace_flags,
       trace_state=self.shared.trace_state,
     )
-    let start = { metadata, span, parent, fields: fields.to_array() }
+    let start = { metadata, span, parent, fields: fields.to_owned() }
     for lane in lanes {
       lane.subscriber.on_span_start(start)
     }
@@ -321,7 +321,7 @@ pub fn TraceContext::event(
     trace_id: self.ensure_trace_id(),
     span: self.current_span,
     message,
-    fields: fields.to_array(),
+    fields: fields.to_owned(),
   }
   for lane in lanes {
     lane.subscriber.on_event(record)

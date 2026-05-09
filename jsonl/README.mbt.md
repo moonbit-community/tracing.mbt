@@ -45,7 +45,7 @@ struct JsonlReadmeWriter {
 
 ///|
 fn JsonlReadmeWriter::new() -> JsonlReadmeWriter {
-  { output: Ref::new(StringBuilder::new()) }
+  { output: Ref(StringBuilder::new()) }
 }
 
 ///|
@@ -63,7 +63,7 @@ fn JsonlReadmeWriter::contents(self : JsonlReadmeWriter) -> String {
 fn JsonlReadmeWriter::lines(self : JsonlReadmeWriter) -> Array[String] {
   let lines : Array[String] = []
   for line in self.contents().split("\n") {
-    let line = line.to_string()
+    let line = line.to_owned()
     if line != "" {
       lines.push(line)
     }
@@ -108,7 +108,7 @@ async test "with_json_writer writes JSON lines" {
   })
 
   let lines = writer.json_lines()
-  assert_eq(4, lines.length())
+  @debug.assert_eq(4, lines.length())
   assert_true(
     lines[0]
     is Object(
@@ -194,7 +194,7 @@ async test "manual span operations become dedicated JSON line kinds" {
   })
 
   let lines = writer.json_lines()
-  assert_eq(6, lines.length())
+  @debug.assert_eq(6, lines.length())
   assert_true(
     lines[3]
     is Object(
@@ -259,8 +259,8 @@ async test "JsonRuntime supports explicit flush shutdown and stats" {
     runtime.stats()
   })
 
-  assert_eq(stats.writer_errors, 0)
-  assert_eq(stats.unclosed_spans, 0)
+  @debug.assert_eq(stats.writer_errors, 0)
+  @debug.assert_eq(stats.unclosed_spans, 0)
   assert_true(writer.lines().length() > 0)
 }
 ```

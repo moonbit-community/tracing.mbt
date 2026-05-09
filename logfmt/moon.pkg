@@ -9,6 +9,10 @@ import {
   "moonbit-community/tracing",
 }
 
+import {
+  "moonbitlang/core/debug",
+} for "test"
+
 warnings = "-29"
 
 options(

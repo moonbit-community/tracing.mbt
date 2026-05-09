@@ -13,11 +13,11 @@ struct Capture {
 ///|
 fn Capture::new() -> Capture {
   {
-    starts: Ref::new([]),
-    records: Ref::new([]),
-    events: Ref::new([]),
-    ends: Ref::new([]),
-    links: Ref::new([]),
+    starts: Ref([]),
+    records: Ref([]),
+    events: Ref([]),
+    ends: Ref([]),
+    links: Ref([]),
   }
 }
 

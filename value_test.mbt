@@ -31,10 +31,10 @@ test "Value::to_json_string maps non-finite doubles to null" {
   let pos_inf = 1.0 / 0.0
   let neg_inf = -1.0 / 0.0
 
-  assert_eq(@tracing.Double(nan).to_json_string(), "null")
-  assert_eq(@tracing.Double(pos_inf).to_json_string(), "null")
-  assert_eq(@tracing.Double(neg_inf).to_json_string(), "null")
-  assert_eq(
+  @debug.assert_eq(@tracing.Double(nan).to_json_string(), "null")
+  @debug.assert_eq(@tracing.Double(pos_inf).to_json_string(), "null")
+  @debug.assert_eq(@tracing.Double(neg_inf).to_json_string(), "null")
+  @debug.assert_eq(
     @tracing.Object([
       ("scalar", @tracing.Double(nan)),
       (

@@ -40,7 +40,7 @@ struct LogfmtReadmeWriter {
 
 ///|
 fn LogfmtReadmeWriter::new() -> LogfmtReadmeWriter {
-  { output: Ref::new(StringBuilder::new()) }
+  { output: Ref(StringBuilder::new()) }
 }
 
 ///|
@@ -58,7 +58,7 @@ fn LogfmtReadmeWriter::contents(self : LogfmtReadmeWriter) -> String {
 fn LogfmtReadmeWriter::lines(self : LogfmtReadmeWriter) -> Array[String] {
   let lines : Array[String] = []
   for line in self.contents().split("\n") {
-    let line = line.to_string()
+    let line = line.to_owned()
     if line != "" {
       lines.push(line)
     }
@@ -92,7 +92,7 @@ async test "with_logfmt_writer writes logfmt lines" {
   })
 
   let lines = writer.lines()
-  assert_eq(4, lines.length())
+  @debug.assert_eq(4, lines.length())
   assert_true(lines[0].contains("kind=\"event\""))
   assert_true(lines[0].contains("name=\"ready\""))
   assert_true(lines[0].contains("message=\"booting\""))
@@ -170,7 +170,7 @@ async test "LogfmtRuntime flushes span links and late fields" {
   })
 
   let lines = writer.lines()
-  assert_eq(6, lines.length())
+  @debug.assert_eq(6, lines.length())
   assert_true(lines[3].contains("kind=\"span_record\""))
   assert_true(lines[3].contains("field.rows=3"))
   assert_true(lines[4].contains("kind=\"span_link\""))
