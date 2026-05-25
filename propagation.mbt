@@ -182,7 +182,10 @@ fn percent_decode(input : StringView) -> String? {
       index += 1
     }
   }
-  Some(@utf8.decode_lossy(Bytes::from_array(bytes)[:]))
+  let decoded = @utf8.decode(Bytes::from_array(bytes)[:]) catch {
+    _ => return None
+  }
+  Some(decoded)
 }
 
 ///|

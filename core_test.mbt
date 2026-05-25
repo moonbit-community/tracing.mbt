@@ -342,3 +342,97 @@ test "filtered root span keeps span ids untouched" {
     capture.starts.val[0].span.span_id,
   )
 }
+
+///|
+fn trace_state_header_with_count(count : Int) -> String {
+  let builder = StringBuilder::new()
+  for index in 0..<count {
+    if index > 0 {
+      builder.write_char(',')
+    }
+    builder.write_string("k")
+    builder.write_string(index.to_string())
+    builder.write_string("=v")
+    builder.write_string(index.to_string())
+  }
+  builder.to_string()
+}
+
+///|
+test "Baggage::from_header rejects malformed UTF-8 percent encodings" {
+  assert_true(Baggage::from_header("x=%FF") is None)
+  assert_true(Baggage::from_header("x=%E2%82") is None)
+}
+
+///|
+test "Baggage percent-encoded UTF-8 round trips" {
+  let expected = @utf8.decode(b"\xE2\x82\xAC")
+  let baggage = Baggage::from_header("currency=%E2%82%AC").unwrap()
+  let entry = baggage.get("currency").unwrap()
+  @debug.assert_eq("currency", entry.name)
+  @debug.assert_eq(expected, entry.value)
+  let encoded = Baggage::empty().insert("currency", expected).unwrap().header()
+  @debug.assert_eq("currency=%E2%82%AC", encoded)
+  @debug.assert_eq(
+    expected,
+    Baggage::from_header(encoded).unwrap().get("currency").unwrap().value,
+  )
+}
+
+///|
+test "TraceState::from_header rejects duplicate oversized and invalid members" {
+  assert_true(TraceState::from_header("rojo=00,rojo=01") is None)
+  assert_true(
+    TraceState::from_header(trace_state_header_with_count(33)) is None,
+  )
+  assert_true(TraceState::from_header("Upper=1") is None)
+  assert_true(TraceState::from_header("ok=a=b") is None)
+  @debug.assert_eq(
+    32,
+    TraceState::from_header(trace_state_header_with_count(32))
+    .unwrap()
+    .entries()
+    .length(),
+  )
+}
+
+///|
+test "root_with_parent exposes only valid propagated parents" {
+  let remote_parent = SpanContext::new(
+    TraceId::from_hex("00000000000000000000000000000001").unwrap(),
+    SpanId::from_hex("0000000000000002").unwrap(),
+    is_remote=true,
+  )
+  let capture = Capture::new()
+  let ctx = TraceContext::root_with_parent(
+    Dispatch::from_subscriber(capture),
+    TraceIdAllocator::new_seeded(0UL),
+    remote_parent,
+  )
+  @debug.assert_eq(Some(remote_parent), ctx.propagated_span())
+  let (handle, child_ctx) = ctx.span(Info, "local-child")
+  ignore(handle.close())
+  @debug.assert_eq(1, capture.starts.val.length())
+  @debug.assert_eq(Some(remote_parent), capture.starts.val[0].parent)
+  @debug.assert_eq(
+    Some(capture.starts.val[0].span),
+    child_ctx.propagated_span(),
+  )
+
+  let invalid_capture = Capture::new()
+  let invalid_ctx = TraceContext::root_with_parent(
+    Dispatch::from_subscriber(invalid_capture),
+    TraceIdAllocator::new_seeded(0UL),
+    SpanContext::invalid(),
+  )
+  @debug.assert_eq(None, invalid_ctx.propagated_span())
+  let (invalid_handle, _) = invalid_ctx.span(Info, "local-root")
+  ignore(invalid_handle.close())
+  @debug.assert_eq(1, invalid_capture.starts.val.length())
+  @debug.assert_eq(None, invalid_capture.starts.val[0].parent)
+}
+
+///|
+test "panic TraceIdAllocator::new_seeded rejects max Int64 seed" {
+  ignore(TraceIdAllocator::new_seeded(9223372036854775807UL))
+}

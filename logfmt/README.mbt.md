@@ -147,7 +147,8 @@ async test "logfmt keeps complex fields on the line" {
 ## Span Links And Manual Control
 
 Use `LogfmtRuntime` directly when the caller needs to own the task group or
-flush before shutdown.
+flush before shutdown. `LogfmtRuntime::stats().unclosed_spans` is updated as
+spans start and close, so it can be inspected before shutdown.
 
 ```mbt check
 ///|

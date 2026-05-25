@@ -245,7 +245,8 @@ async test "manual span operations become dedicated JSON line kinds" {
 
 Use `JsonRuntime` directly when the caller needs explicit control over flushing
 and shutdown, or wants to inspect counters such as dropped records and unclosed
-spans.
+spans. `unclosed_spans` is updated as spans start and close, so `stats()` can be
+used as a live runtime snapshot before shutdown.
 
 ```mbt check
 ///|

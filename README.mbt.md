@@ -141,7 +141,9 @@ async test "quick start with json writer" {
 ## Root Traces
 
 Create a root context with `TraceContext::root(dispatch, trace_ids)`. Trace ids
-are allocated lazily. Filtered-out callsites do not consume an id.
+are allocated lazily. Filtered-out callsites do not consume an id. Deterministic
+allocators created with `TraceIdAllocator::new_seeded` reject the maximum Int64
+seed because the first allocation increments the seed before materializing an id.
 
 ```mbt check
 ///|
@@ -892,6 +894,9 @@ The main public entry points are:
 - `JsonRuntime::shutdown()`
 - `JsonRuntime::stats()`
 
+`JsonRuntime::stats().unclosed_spans` is a live snapshot of spans started
+through the runtime dispatch whose handles have not closed yet.
+
 ## logfmt Package
 
 `moonbit-community/tracing/logfmt` is the human-readable backend in this
@@ -917,6 +922,9 @@ The main public entry points are:
 - `LogfmtRuntime::shutdown()`
 - `LogfmtRuntime::stats()`
 
+`LogfmtRuntime::stats().unclosed_spans` is a live snapshot of spans started
+through the runtime dispatch whose handles have not closed yet.
+
 ## OpenTelemetry Package
 
 `moonbit-community/tracing/opentelemetry` adds W3C propagation and a generic
@@ -924,8 +932,9 @@ batch export runtime.
 
 Use it when you want:
 
-- parse and inject `traceparent`, `tracestate`, and `baggage`
-- root a local trace under a propagated remote parent
+- parse and inject `traceparent`, validated `tracestate`, and strictly decoded
+  UTF-8 `baggage`
+- root a local trace under a valid propagated remote parent
 - export `ReadableSpan` batches into your own backend
 - attach OpenTelemetry-specific span overrides such as name, kind, and status
 
