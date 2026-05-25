@@ -49,7 +49,12 @@ fn JsonlReadmeWriter::new() -> JsonlReadmeWriter {
 }
 
 ///|
-impl @io.Writer for JsonlReadmeWriter with write_once(self, buf, offset~, len~) {
+impl @io.Writer for JsonlReadmeWriter with fn write_once(
+  self,
+  buf,
+  offset~,
+  len~,
+) {
   self.output.val.write_string(@utf8.decode(buf[offset:offset + len]))
   len
 }

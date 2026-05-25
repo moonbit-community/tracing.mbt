@@ -30,27 +30,27 @@ fn root_ctx(dispatch : Dispatch) -> TraceContext {
 }
 
 ///|
-impl Subscriber for Capture with on_span_start(self, record) {
+impl Subscriber for Capture with fn on_span_start(self, record) {
   self.starts.val.push(record)
 }
 
 ///|
-impl Subscriber for Capture with on_span_record(self, record) {
+impl Subscriber for Capture with fn on_span_record(self, record) {
   self.records.val.push(record)
 }
 
 ///|
-impl Subscriber for Capture with on_event(self, record) {
+impl Subscriber for Capture with fn on_event(self, record) {
   self.events.val.push(record)
 }
 
 ///|
-impl Subscriber for Capture with on_span_end(self, record) {
+impl Subscriber for Capture with fn on_span_end(self, record) {
   self.ends.val.push(record)
 }
 
 ///|
-impl Subscriber for Capture with on_span_link(self, record) {
+impl Subscriber for Capture with fn on_span_link(self, record) {
   self.links.val.push(record)
 }
 

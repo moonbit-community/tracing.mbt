@@ -232,7 +232,7 @@ pub impl @debug.Debug for Value
 
 // Traits
 pub(open) trait IntoValue {
-  into_value(Self) -> Value
+  fn into_value(Self) -> Value
 }
 pub impl IntoValue for Bool
 pub impl IntoValue for Int
@@ -248,10 +248,10 @@ pub impl IntoValue for BytesView
 pub impl IntoValue for StringView
 
 pub(open) trait Subscriber {
-  on_span_start(Self, SpanStart) -> Unit
-  on_span_record(Self, SpanRecord) -> Unit = _
-  on_event(Self, EventRecord) -> Unit
-  on_span_end(Self, SpanEnd) -> Unit
-  on_span_link(Self, SpanLink) -> Unit = _
+  fn on_span_start(Self, SpanStart) -> Unit
+  fn on_span_record(Self, SpanRecord) -> Unit = _
+  fn on_event(Self, EventRecord) -> Unit
+  fn on_span_end(Self, SpanEnd) -> Unit
+  fn on_span_link(Self, SpanLink) -> Unit = _
 }
 

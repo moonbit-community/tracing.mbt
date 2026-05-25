@@ -37,7 +37,7 @@ pub(all) enum Value {
 ///|
 /// Conversion trait used by `field` and other convenience APIs.
 pub(open) trait IntoValue {
-  into_value(Self) -> Value
+  fn into_value(Self) -> Value
 }
 
 ///|
@@ -210,71 +210,71 @@ fn Value::to_debug_repr(self : Value) -> Repr {
 }
 
 ///|
-pub impl Debug for Value with to_repr(self) {
+pub impl Debug for Value with fn to_repr(self) {
   self.to_debug_repr()
 }
 
 ///|
-pub impl IntoValue for Value with into_value(self) {
+pub impl IntoValue for Value with fn into_value(self) {
   self
 }
 
 ///|
-pub impl IntoValue for Bool with into_value(self) {
+pub impl IntoValue for Bool with fn into_value(self) {
   Bool(self)
 }
 
 ///|
-pub impl IntoValue for Int with into_value(self) {
+pub impl IntoValue for Int with fn into_value(self) {
   Int(self)
 }
 
 ///|
-pub impl IntoValue for Int64 with into_value(self) {
+pub impl IntoValue for Int64 with fn into_value(self) {
   Int64(self)
 }
 
 ///|
-pub impl IntoValue for UInt with into_value(self) {
+pub impl IntoValue for UInt with fn into_value(self) {
   UInt(self)
 }
 
 ///|
-pub impl IntoValue for UInt64 with into_value(self) {
+pub impl IntoValue for UInt64 with fn into_value(self) {
   UInt64(self)
 }
 
 ///|
-pub impl IntoValue for Double with into_value(self) {
+pub impl IntoValue for Double with fn into_value(self) {
   Double(self)
 }
 
 ///|
-pub impl IntoValue for String with into_value(self) {
+pub impl IntoValue for String with fn into_value(self) {
   String(self)
 }
 
 ///|
-pub impl IntoValue for StringView with into_value(self) {
+pub impl IntoValue for StringView with fn into_value(self) {
   String(self.to_owned())
 }
 
 ///|
-pub impl IntoValue for Bytes with into_value(self) {
+pub impl IntoValue for Bytes with fn into_value(self) {
   Bytes(self)
 }
 
 ///|
-pub impl IntoValue for BytesView with into_value(self) {
+pub impl IntoValue for BytesView with fn into_value(self) {
   Bytes(self.to_owned())
 }
 
 ///|
-pub impl IntoValue for Array[Value] with into_value(self) {
+pub impl IntoValue for Array[Value] with fn into_value(self) {
   Array(self)
 }
 
 ///|
-pub impl IntoValue for ArrayView[Value] with into_value(self) {
+pub impl IntoValue for ArrayView[Value] with fn into_value(self) {
   Array(self.to_owned())
 }

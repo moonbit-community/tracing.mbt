@@ -74,19 +74,19 @@ pub struct SpanLink {
 ///
 /// Filtering is decided by `Dispatch`, not by individual subscribers.
 pub(open) trait Subscriber {
-  on_span_start(Self, SpanStart) -> Unit
-  on_span_record(Self, SpanRecord) -> Unit = _
-  on_event(Self, EventRecord) -> Unit
-  on_span_end(Self, SpanEnd) -> Unit
-  on_span_link(Self, SpanLink) -> Unit = _
+  fn on_span_start(Self, SpanStart) -> Unit
+  fn on_span_record(Self, SpanRecord) -> Unit = _
+  fn on_event(Self, EventRecord) -> Unit
+  fn on_span_end(Self, SpanEnd) -> Unit
+  fn on_span_link(Self, SpanLink) -> Unit = _
 }
 
 ///|
-impl Subscriber with on_span_record(_self, _record) {
+impl Subscriber with fn on_span_record(_self, _record) {
 
 }
 
 ///|
-impl Subscriber with on_span_link(_self, _record) {
+impl Subscriber with fn on_span_link(_self, _record) {
 
 }

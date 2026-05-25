@@ -72,32 +72,32 @@ fn ReadmeSink::new() -> ReadmeSink {
 }
 
 ///|
-impl @tracing.Subscriber for ReadmeCapture with on_span_start(self, record) {
+impl @tracing.Subscriber for ReadmeCapture with fn on_span_start(self, record) {
   self.starts.push(record)
 }
 
 ///|
-impl @tracing.Subscriber for ReadmeCapture with on_span_record(self, record) {
+impl @tracing.Subscriber for ReadmeCapture with fn on_span_record(self, record) {
   self.records.push(record)
 }
 
 ///|
-impl @tracing.Subscriber for ReadmeCapture with on_event(self, record) {
+impl @tracing.Subscriber for ReadmeCapture with fn on_event(self, record) {
   self.events.push(record)
 }
 
 ///|
-impl @tracing.Subscriber for ReadmeCapture with on_span_end(self, record) {
+impl @tracing.Subscriber for ReadmeCapture with fn on_span_end(self, record) {
   self.ends.push(record)
 }
 
 ///|
-impl @tracing.Subscriber for ReadmeCapture with on_span_link(self, record) {
+impl @tracing.Subscriber for ReadmeCapture with fn on_span_link(self, record) {
   self.links.push(record)
 }
 
 ///|
-impl @io.Writer for ReadmeSink with write_once(self, _buf, offset~, len~) {
+impl @io.Writer for ReadmeSink with fn write_once(self, _buf, offset~, len~) {
   ignore(offset)
   self.writes.val += 1
   len
@@ -226,7 +226,7 @@ struct ReadmeUser {
 }
 
 ///|
-impl @tracing.IntoValue for ReadmeUser with into_value(self) {
+impl @tracing.IntoValue for ReadmeUser with fn into_value(self) {
   @tracing.Object([
     ("id", @tracing.Int(self.id)),
     ("name", @tracing.String(self.name)),
