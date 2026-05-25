@@ -628,6 +628,22 @@ async test "JsonRuntime reports unclosed spans on shutdown" {
 }
 
 ///|
+async test "JsonRuntime stats tracks unclosed spans before shutdown" {
+  let writer = MemoryWriter::new()
+  let stats = @async.with_task_group(group => {
+    let runtime = JsonRuntime::start_in(group, writer)
+    let ctx = root_ctx(runtime.dispatch())
+    let (handle, _) = ctx.span(@tracing.Info, "live")
+    let started = runtime.stats().unclosed_spans
+    ignore(handle.close())
+    let closed = runtime.stats().unclosed_spans
+    runtime.shutdown()
+    (started, closed, runtime.stats().unclosed_spans)
+  })
+  @debug.assert_eq((1, 0, 0), stats)
+}
+
+///|
 async test "JsonRuntime reports writer failures through flush" {
   let writer = MemoryWriter::new(fail_after=0)
   let result : Result[JsonStats, _] = try? @async.with_task_group(group => {

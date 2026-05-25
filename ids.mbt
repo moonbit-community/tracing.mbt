@@ -256,11 +256,12 @@ pub fn TraceIdAllocator::new() -> TraceIdAllocator {
 ///|
 /// Construct a deterministic allocator for tests and documentation.
 ///
-/// `seed` controls the first lazily allocated trace id. For example,
-/// `new_seeded(0)` reproduces the historical sequence that starts from `...01`.
+/// `seed` controls the first lazily allocated trace id. It must leave room for
+/// the allocator's first increment. For example, `new_seeded(0)` reproduces the
+/// historical sequence that starts from `...01`.
 pub fn TraceIdAllocator::new_seeded(seed : UInt64) -> TraceIdAllocator {
-  guard seed <= max_int64_u64 else {
-    abort("TraceIdAllocator seed must fit in Int64")
+  guard seed < max_int64_u64 else {
+    abort("TraceIdAllocator seed must be less than Int64 max")
   }
   { state: Counter(Ref(seed.reinterpret_as_int64())) }
 }

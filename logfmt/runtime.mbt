@@ -20,8 +20,11 @@ pub struct LogfmtOptions {
 ///|
 /// Snapshot of runtime health counters.
 pub struct LogfmtStats {
+  /// Records dropped because the runtime stopped accepting or the queue filled.
   dropped_records : Int
+  /// Writer failures observed by flush or shutdown.
   writer_errors : Int
+  /// Current count of started spans that have not been closed yet.
   unclosed_spans : Int
 } derive(Debug)
 
@@ -67,6 +70,7 @@ priv struct LogfmtSubscriber {
   accepting : Ref[Bool]
   dropped_records : Ref[Int]
   open_spans : Ref[Set[@tracing.SpanRef]]
+  unclosed_spans : Ref[Int]
 }
 
 ///|
@@ -397,6 +401,7 @@ impl @tracing.Subscriber for LogfmtSubscriber with fn on_span_start(
   record,
 ) {
   self.open_spans.val.add(record.span)
+  self.unclosed_spans.val = self.open_spans.val.length()
   self.enqueue(encode_span_start(record))
 }
 
@@ -416,6 +421,7 @@ impl @tracing.Subscriber for LogfmtSubscriber with fn on_event(self, record) {
 ///|
 impl @tracing.Subscriber for LogfmtSubscriber with fn on_span_end(self, record) {
   self.open_spans.val.remove(record.span)
+  self.unclosed_spans.val = self.open_spans.val.length()
   self.enqueue(encode_span_end(record))
 }
 
@@ -787,6 +793,7 @@ pub fn[X] LogfmtRuntime::start_in(
     accepting,
     dropped_records,
     open_spans,
+    unclosed_spans,
   }
   let dispatch = @tracing.Dispatch::from_subscriber(subscriber)
   group.spawn_bg(no_wait=true, allow_failure=true, () => {
