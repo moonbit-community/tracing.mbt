@@ -265,29 +265,29 @@ fn JsonSubscriber::enqueue(self : JsonSubscriber, line : String) -> Unit {
 }
 
 ///|
-impl @tracing.Subscriber for JsonSubscriber with on_span_start(self, record) {
+impl @tracing.Subscriber for JsonSubscriber with fn on_span_start(self, record) {
   self.open_spans.val.add(record.span)
   self.enqueue(encode_span_start(record))
 }
 
 ///|
-impl @tracing.Subscriber for JsonSubscriber with on_span_record(self, record) {
+impl @tracing.Subscriber for JsonSubscriber with fn on_span_record(self, record) {
   self.enqueue(encode_span_record(record))
 }
 
 ///|
-impl @tracing.Subscriber for JsonSubscriber with on_event(self, record) {
+impl @tracing.Subscriber for JsonSubscriber with fn on_event(self, record) {
   self.enqueue(encode_event(record))
 }
 
 ///|
-impl @tracing.Subscriber for JsonSubscriber with on_span_end(self, record) {
+impl @tracing.Subscriber for JsonSubscriber with fn on_span_end(self, record) {
   self.open_spans.val.remove(record.span)
   self.enqueue(encode_span_end(record))
 }
 
 ///|
-impl @tracing.Subscriber for JsonSubscriber with on_span_link(self, record) {
+impl @tracing.Subscriber for JsonSubscriber with fn on_span_link(self, record) {
   self.enqueue(encode_span_link(record))
 }
 
@@ -493,7 +493,7 @@ pub struct JsonRuntime {
 }
 
 ///|
-pub impl Default for JsonOptions with default() {
+pub impl Default for JsonOptions with fn default() {
   {
     record_queue_capacity: 8192,
     control_queue_capacity: 8,

@@ -18,17 +18,17 @@ fn Capture::new() -> Capture {
 fn fake_source_loc(repr : String) -> SourceLoc = "%identity"
 
 ///|
-impl @tracing.Subscriber for Capture with on_span_start(self, record) {
+impl @tracing.Subscriber for Capture with fn on_span_start(self, record) {
   self.starts.val.push(record)
 }
 
 ///|
-impl @tracing.Subscriber for Capture with on_event(_self, _record) {
+impl @tracing.Subscriber for Capture with fn on_event(_self, _record) {
 
 }
 
 ///|
-impl @tracing.Subscriber for Capture with on_span_end(_self, _record) {
+impl @tracing.Subscriber for Capture with fn on_span_end(_self, _record) {
 
 }
 
@@ -218,7 +218,7 @@ fn keys(entries : Array[(String, String)]) -> Array[String] {
 }
 
 ///|
-impl @io.Writer for MemoryWriter with write_once(self, buf, offset~, len~) {
+impl @io.Writer for MemoryWriter with fn write_once(self, buf, offset~, len~) {
   if self.delay_ms > 0 {
     @async.sleep(self.delay_ms)
   }

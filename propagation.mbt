@@ -192,7 +192,7 @@ pub struct TraceState {
 } derive(Eq, Compare, Hash, Debug)
 
 ///|
-pub impl Default for TraceState with default() {
+pub impl Default for TraceState with fn default() {
   { entries: [] }
 }
 
@@ -320,7 +320,7 @@ pub struct Baggage {
 } derive(Eq, Compare, Hash, Debug)
 
 ///|
-pub impl Default for Baggage with default() {
+pub impl Default for Baggage with fn default() {
   { entries: [] }
 }
 

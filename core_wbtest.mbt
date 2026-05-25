@@ -10,17 +10,17 @@ fn CaptureWb::new() -> CaptureWb {
 }
 
 ///|
-impl Subscriber for CaptureWb with on_span_start(self, record) {
+impl Subscriber for CaptureWb with fn on_span_start(self, record) {
   self.starts.val.push(record)
 }
 
 ///|
-impl Subscriber for CaptureWb with on_event(self, record) {
+impl Subscriber for CaptureWb with fn on_event(self, record) {
   self.events.val.push(record)
 }
 
 ///|
-impl Subscriber for CaptureWb with on_span_end(_self, _record) {
+impl Subscriber for CaptureWb with fn on_span_end(_self, _record) {
 
 }
 

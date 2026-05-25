@@ -229,22 +229,22 @@ fn SpanId::from_random(rand : @random.Rand) -> SpanId {
 }
 
 ///|
-pub impl Debug for TraceId with to_repr(self) {
+pub impl Debug for TraceId with fn to_repr(self) {
   Repr::literal(self.to_hex())
 }
 
 ///|
-pub impl Debug for SpanId with to_repr(self) {
+pub impl Debug for SpanId with fn to_repr(self) {
   Repr::literal(self.to_hex())
 }
 
 ///|
-pub impl Show for TraceId with output(self, logger) {
+pub impl Show for TraceId with fn output(self, logger) {
   logger.write_string(self.to_hex())
 }
 
 ///|
-pub impl Show for SpanId with output(self, logger) {
+pub impl Show for SpanId with fn output(self, logger) {
   logger.write_string(self.to_hex())
 }
 
