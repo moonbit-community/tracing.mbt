@@ -4,6 +4,7 @@ version = "0.1.0"
 
 import {
   "moonbitlang/async@0.17.0",
+  "moonbit-community/opentelemetry@0.1.2",
 }
 
 readme = "README.mbt.md"
