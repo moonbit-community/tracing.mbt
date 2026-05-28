@@ -14,6 +14,8 @@ The repository exposes four packages:
   JSON Lines.
 - `moonbit-community/tracing/logfmt`: a ready-made backend that writes records
   as logfmt.
+- `moonbit-community/tracing/otel`: a bridge that exports tracing spans through
+  an OpenTelemetry trace `Tracer`.
 
 Every MoonBit block below uses `mbt check`, so the examples participate in
 `moon check` and `moon test`.

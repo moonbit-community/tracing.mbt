@@ -1,0 +1,73 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/tracing/otel"
+
+import {
+  "moonbit-community/opentelemetry/interface/baggage",
+  "moonbit-community/opentelemetry/interface/common",
+  "moonbit-community/opentelemetry/interface/context",
+  "moonbit-community/opentelemetry/interface/trace",
+  "moonbit-community/tracing",
+  "moonbitlang/async",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn baggage_from_otel(@baggage.Baggage) -> @tracing.Baggage
+
+pub fn baggage_to_otel(@tracing.Baggage) -> @baggage.Baggage
+
+pub fn span_context_from_otel(@common.SpanContext) -> @tracing.SpanContext?
+
+pub fn span_context_to_otel(@tracing.SpanContext) -> @common.SpanContext
+
+pub fn trace_context_from_otel(@tracing.Dispatch, @tracing.TraceIdAllocator, @context.Context) -> @tracing.TraceContext
+
+pub async fn[X] with_global_otel_tracer(String, version? : String?, schema_url? : String?, attributes? : ArrayView[@common.KeyValue], options? : OtelOptions, async (@tracing.TraceContext) -> X) -> X
+
+pub async fn[X] with_otel_tracer(@trace.Tracer, options? : OtelOptions, async (@tracing.TraceContext) -> X) -> X
+
+// Errors
+pub suberror OtelHelperError {
+  UserAndShutdownFailed(Error, OtelRuntimeError)
+} derive(@debug.Debug)
+
+pub suberror OtelRuntimeError {
+  ChannelClosed(String)
+  TimedOut(String)
+} derive(@debug.Debug)
+
+// Types and methods
+pub struct OtelOptions {
+  queue_capacity : Int
+  control_queue_capacity : Int
+  ack_queue_capacity : Int
+  command_timeout_ms : Int
+  shutdown_timeout_ms : Int
+  with_target : Bool
+  with_level : Bool
+  with_location : Bool
+  error_events_to_status : Bool
+  error_events_to_exceptions : Bool
+}
+pub fn OtelOptions::new(queue_capacity? : Int, control_queue_capacity? : Int, ack_queue_capacity? : Int, command_timeout_ms? : Int, shutdown_timeout_ms? : Int, with_target? : Bool, with_level? : Bool, with_location? : Bool, error_events_to_status? : Bool, error_events_to_exceptions? : Bool) -> Self
+pub impl Default for OtelOptions
+
+pub struct OtelRuntime {
+  // private fields
+}
+pub fn OtelRuntime::current_context(Self, @tracing.TraceContext) -> @context.Context
+pub fn OtelRuntime::dispatch(Self) -> @tracing.Dispatch
+pub async fn OtelRuntime::flush(Self) -> Unit
+pub async fn OtelRuntime::shutdown(Self) -> Unit
+pub fn[X] OtelRuntime::start_in(@async.TaskGroup[X], @trace.Tracer, options? : OtelOptions) -> Self
+pub fn OtelRuntime::stats(Self) -> OtelStats
+
+pub struct OtelStats {
+  dropped_records : Int
+  unclosed_spans : Int
+} derive(@debug.Debug)
+
+// Type aliases
+
+// Traits
+
