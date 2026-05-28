@@ -1,0 +1,23 @@
+import {
+  "moonbitlang/core/encoding/base64",
+  "moonbitlang/core/string",
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+  "moonbit-community/tracing",
+  "moonbit-community/opentelemetry/interface/baggage",
+  "moonbit-community/opentelemetry/interface/common",
+  "moonbit-community/opentelemetry/interface/context",
+  "moonbit-community/opentelemetry/interface/global",
+  "moonbit-community/opentelemetry/interface/trace",
+}
+
+import {
+  "moonbitlang/core/debug",
+  "moonbit-community/opentelemetry/sdk/trace" @sdktrace,
+} for "test"
+
+warnings = "-29"
+
+options(
+  backend: [ "native" ],
+)
