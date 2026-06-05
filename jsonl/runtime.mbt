@@ -461,7 +461,9 @@ fn shutdown_timeout_message(timeout_ms : Int) -> String {
 async fn protected_shutdown(runtime : JsonRuntime) -> Result[Unit, Error] {
   let result : Result[Unit, Error]? = @async.protect_from_cancel(() => {
     @async.with_timeout_opt(runtime.shutdown_timeout_ms, () => {
-      try? runtime.shutdown()
+      Ok(runtime.shutdown()) catch {
+        err => Err(err)
+      }
     })
   })
   match result {

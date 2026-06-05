@@ -594,7 +594,9 @@ fn shutdown_timeout_message(timeout_ms : Int) -> String {
 async fn protected_shutdown(runtime : LogfmtRuntime) -> Result[Unit, Error] {
   let result : Result[Unit, Error]? = @async.protect_from_cancel(() => {
     @async.with_timeout_opt(runtime.shutdown_timeout_ms, () => {
-      try? runtime.shutdown()
+      Ok(runtime.shutdown()) catch {
+        err => Err(err)
+      }
     })
   })
   match result {
@@ -807,7 +809,7 @@ pub fn[X] LogfmtRuntime::start_in(
     control_queue,
     ack_queue,
     wake_queue,
-    control_gate: @async.Semaphore::new(1),
+    control_gate: @async.Semaphore(1),
     next_command_id: Ref(0L),
     dropped_records,
     writer_errors,
