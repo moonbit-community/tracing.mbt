@@ -120,20 +120,20 @@ fn append_logfmt_string(builder : StringBuilder, value : String) -> Unit {
 ///|
 fn level_name(level : @tracing.Level) -> String {
   match level {
-    @tracing.Trace => "trace"
-    @tracing.Debug => "debug"
-    @tracing.Info => "info"
-    @tracing.Warn => "warn"
-    @tracing.Error => "error"
+    Trace => "trace"
+    Debug => "debug"
+    Info => "info"
+    Warn => "warn"
+    Error => "error"
   }
 }
 
 ///|
 fn status_name(status : @tracing.SpanStatus) -> String {
   match status {
-    @tracing.Ok => "ok"
-    @tracing.Error => "error"
-    @tracing.Cancelled => "cancelled"
+    Ok => "ok"
+    Error => "error"
+    Cancelled => "cancelled"
   }
 }
 
@@ -199,20 +199,18 @@ fn append_double(builder : StringBuilder, value : Double) -> Unit {
 ///|
 fn append_value(builder : StringBuilder, value : @tracing.Value) -> Unit {
   match value {
-    @tracing.Null => builder.write_string("null")
-    @tracing.Bool(value) =>
-      builder.write_string(if value { "true" } else { "false" })
-    @tracing.Int(value) => builder.write_object(value)
-    @tracing.Int64(value) => builder.write_string(value.to_string())
-    @tracing.UInt(value) => builder.write_object(value)
-    @tracing.UInt64(value) => builder.write_string(value.to_string())
-    @tracing.Double(value) => append_double(builder, value)
-    @tracing.String(value) => append_logfmt_string(builder, value)
-    @tracing.Bytes(value) =>
-      append_logfmt_string(builder, @base64.encode(value[:]))
-    @tracing.Array(values) =>
+    Null => builder.write_string("null")
+    Bool(value) => builder.write_string(if value { "true" } else { "false" })
+    Int(value) => builder.write_object(value)
+    Int64(value) => builder.write_string(value.to_string())
+    UInt(value) => builder.write_object(value)
+    UInt64(value) => builder.write_string(value.to_string())
+    Double(value) => append_double(builder, value)
+    String(value) => append_logfmt_string(builder, value)
+    Bytes(value) => append_logfmt_string(builder, @base64.encode(value[:]))
+    Array(values) =>
       append_logfmt_string(builder, @tracing.Array(values).to_json_string())
-    @tracing.Object(entries) =>
+    Object(entries) =>
       append_logfmt_string(builder, @tracing.Object(entries).to_json_string())
   }
 }
@@ -773,16 +771,12 @@ pub fn[X] LogfmtRuntime::start_in(
   guard options.shutdown_timeout_ms > 0 else {
     abort("LogfmtOptions.shutdown_timeout_ms must be positive")
   }
-  let record_queue = @async.Queue(
-    kind=@aqueue.Blocking(options.record_queue_capacity),
-  )
+  let record_queue = @async.Queue(kind=Blocking(options.record_queue_capacity))
   let control_queue = @async.Queue(
-    kind=@aqueue.Blocking(options.control_queue_capacity),
+    kind=Blocking(options.control_queue_capacity),
   )
-  let ack_queue = @async.Queue(
-    kind=@aqueue.Blocking(options.ack_queue_capacity),
-  )
-  let wake_queue = @async.Queue(kind=@aqueue.DiscardLatest(1))
+  let ack_queue = @async.Queue(kind=Blocking(options.ack_queue_capacity))
+  let wake_queue = @async.Queue(kind=DiscardLatest(1))
   let dropped_records = Ref(0)
   let writer_errors = Ref(0)
   let writer_error_text = Ref(None)
@@ -809,7 +803,7 @@ pub fn[X] LogfmtRuntime::start_in(
     control_queue,
     ack_queue,
     wake_queue,
-    control_gate: @async.Semaphore(1),
+    control_gate: Semaphore(1),
     next_command_id: Ref(0L),
     dropped_records,
     writer_errors,

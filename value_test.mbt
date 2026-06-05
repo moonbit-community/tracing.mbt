@@ -2,17 +2,10 @@
 test "Value Debug stays JSON-like" {
   debug_inspect(
     @tracing.Object([
-      ("int64", @tracing.Int64(@string.parse_int64("9007199254740993"))),
-      ("text", @tracing.String("line\n\"quoted\"")),
-      ("bytes", @tracing.Bytes(b"hi")),
-      (
-        "items",
-        @tracing.Array([
-          @tracing.Bool(true),
-          @tracing.Null,
-          @tracing.Object([("nested", @tracing.UInt64(7UL))]),
-        ]),
-      ),
+      ("int64", Int64(@string.parse_int64("9007199254740993"))),
+      ("text", String("line\n\"quoted\"")),
+      ("bytes", Bytes(b"hi")),
+      ("items", Array([Bool(true), Null, Object([("nested", UInt64(7UL))])])),
     ]),
     content=(
       #|{
@@ -36,15 +29,8 @@ test "Value::to_json_string maps non-finite doubles to null" {
   @debug.assert_eq(@tracing.Double(neg_inf).to_json_string(), "null")
   @debug.assert_eq(
     @tracing.Object([
-      ("scalar", @tracing.Double(nan)),
-      (
-        "items",
-        @tracing.Array([
-          @tracing.Double(pos_inf),
-          @tracing.Double(1.5),
-          @tracing.Double(neg_inf),
-        ]),
-      ),
+      ("scalar", Double(nan)),
+      ("items", Array([Double(pos_inf), Double(1.5), Double(neg_inf)])),
     ]).to_json_string(),
     "{\"scalar\":null,\"items\":[null,1.5,null]}",
   )
@@ -52,7 +38,5 @@ test "Value::to_json_string maps non-finite doubles to null" {
 
 ///|
 test "panic Value::to_json_string rejects duplicate object field names" {
-  ignore(
-    @tracing.Object([("dup", @tracing.Int(1)), ("dup", @tracing.Int(2))]).to_json_string(),
-  )
+  ignore(@tracing.Object([("dup", Int(1)), ("dup", Int(2))]).to_json_string())
 }

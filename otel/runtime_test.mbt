@@ -101,7 +101,7 @@ fn attr_string(
   key : String,
 ) -> String? {
   match attr_value(attributes, key) {
-    Some(@common.String(value)) => Some(value)
+    Some(String(value)) => Some(value)
     _ => None
   }
 }
@@ -109,7 +109,7 @@ fn attr_string(
 ///|
 fn attr_int64(attributes : ArrayView[@common.KeyValue], key : String) -> Int64? {
   match attr_value(attributes, key) {
-    Some(@common.Int64(value)) => Some(value)
+    Some(Int64(value)) => Some(value)
     _ => None
   }
 }
@@ -125,7 +125,7 @@ async test "OtelRuntime exports span lifecycle records to OpenTelemetry" {
     )
     let ctx = root_ctx(runtime.dispatch())
     let (parent_handle, parent_ctx) = ctx.span(
-      @tracing.Info,
+      Info,
       "parent",
       target="svc",
       fields=[
@@ -136,14 +136,14 @@ async test "OtelRuntime exports span lifecycle records to OpenTelemetry" {
       loc=fake_source_loc("parent-loc"),
     )
     let (child_handle, child_ctx) = parent_ctx.span(
-      @tracing.Info,
+      Info,
       "child",
       target="worker",
       fields=[@tracing.field("child_attr", true)],
       loc=fake_source_loc("child-loc"),
     )
     child_ctx.event(
-      @tracing.Error,
+      Error,
       "failed",
       message?=Some("bad"),
       fields=[@tracing.field("rows", 3)],
@@ -165,25 +165,22 @@ async test "OtelRuntime exports span lifecycle records to OpenTelemetry" {
   let parent = exported_span(spans, "server.request")
   let child = exported_span(spans, "child")
 
-  @debug.assert_eq(parent.kind, @sdktrace.Server)
+  @debug.assert_eq(parent.kind, Server)
   @debug.assert_eq(attr_string(parent.attributes, "request_id"), Some("req-1"))
   @debug.assert_eq(attr_string(parent.attributes, "target"), Some("svc"))
   @debug.assert_eq(attr_string(parent.attributes, "level"), Some("info"))
   assert_true(
     attr_string(parent.attributes, "loc").unwrap().contains("parent-loc"),
   )
-  @debug.assert_eq(parent.status.code, @sdktrace.Error)
+  @debug.assert_eq(parent.status.code, Error)
   @debug.assert_eq(parent.status.description, Some("db failed"))
 
   @debug.assert_eq(
     child.parent_span_context.unwrap().span_id().to_hex(),
     parent.span_context.span_id().to_hex(),
   )
-  @debug.assert_eq(
-    attr_value(child.attributes, "child_attr"),
-    Some(@common.Bool(true)),
-  )
-  @debug.assert_eq(child.status.code, @sdktrace.Error)
+  @debug.assert_eq(attr_value(child.attributes, "child_attr"), Some(Bool(true)))
+  @debug.assert_eq(child.status.code, Error)
   @debug.assert_eq(child.status.description, Some("bad"))
   let event = event_named(child.events, "failed")
   @debug.assert_eq(attr_int64(event.attributes, "rows"), Some(3L))
@@ -197,18 +194,18 @@ async test "OtelRuntime links follows-from and exposes current OpenTelemetry con
   let runtime = @async.with_task_group(group => {
     let runtime = OtelRuntime::start_in(group, tracer)
     let ctx = root_ctx(runtime.dispatch())
-    let (parent_handle, parent_ctx) = ctx.span(@tracing.Info, "parent")
+    let (parent_handle, parent_ctx) = ctx.span(Info, "parent")
     let current = runtime.current_context(parent_ctx)
     assert_true(current.span_context().unwrap().is_valid())
     let parent_span = parent_handle.span_context().unwrap()
-    let (follower_handle, _) = ctx.span(@tracing.Info, "follower", follows_from=[
+    let (follower_handle, _) = ctx.span(Info, "follower", follows_from=[
       parent_span,
     ])
     ignore(follower_handle.close())
     ignore(parent_handle.close())
     runtime.flush()
     runtime.shutdown()
-    ctx.event(@tracing.Info, "after-shutdown")
+    ctx.event(Info, "after-shutdown")
     runtime.shutdown()
     runtime
   })
@@ -231,7 +228,7 @@ async test "OtelRuntime reports unclosed spans on shutdown" {
   let runtime = @async.with_task_group(group => {
     let runtime = OtelRuntime::start_in(group, tracer)
     let ctx = root_ctx(runtime.dispatch())
-    ignore(ctx.span(@tracing.Info, "leaked"))
+    ignore(ctx.span(Info, "leaked"))
     runtime.shutdown()
     runtime
   })
@@ -254,7 +251,7 @@ async test "OtelRuntime counts dropped span ends when the queue is full" {
     )
     let ctx = root_ctx(runtime.dispatch())
     for index in 0..<32 {
-      let (handle, _) = ctx.span(@tracing.Info, "burst-\{index}")
+      let (handle, _) = ctx.span(Info, "burst-\{index}")
       ignore(handle.close())
     }
     runtime.shutdown()

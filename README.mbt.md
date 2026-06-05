@@ -117,15 +117,15 @@ Lines, and shuts the runtime down before the scope exits.
 async test "quick start with json writer" {
   let sink = ReadmeSink::new()
   @jsonl.with_json_writer(sink, ctx => {
-    ctx.event(@tracing.Info, "app_started", message?=Some("booting"), fields=[
+    ctx.event(Info, "app_started", message?=Some("booting"), fields=[
       @tracing.field("version", "0.1.0"),
       @tracing.field("port", 3000),
     ])
     ctx.with_span(
-      @tracing.Info,
+      Info,
       "handle_request",
       request_ctx => {
-        request_ctx.event(@tracing.Info, "validated", fields=[
+        request_ctx.event(Info, "validated", fields=[
           @tracing.field("method", "GET"),
           @tracing.field("path", "/health"),
         ])
@@ -162,13 +162,13 @@ test "root traces allocate ids lazily" {
     ids,
   )
   first.event(
-    @tracing.Info,
+    Info,
     "first",
     target="readme.root",
     loc=readme_source_loc("root-first"),
   )
   second.event(
-    @tracing.Info,
+    Info,
     "second",
     target="readme.root",
     loc=readme_source_loc("root-second"),
@@ -232,10 +232,7 @@ struct ReadmeUser {
 
 ///|
 impl @tracing.IntoValue for ReadmeUser with fn into_value(self) {
-  @tracing.Object([
-    ("id", @tracing.Int(self.id)),
-    ("name", @tracing.String(self.name)),
-  ])
+  Object([("id", Int(self.id)), ("name", String(self.name))])
 }
 
 ///|
@@ -244,7 +241,7 @@ test "fields accept custom values" {
   // Check the exact JSON shape first, then verify that `field(...)` uses the
   // same `IntoValue` conversion automatically.
   let payload = @tracing.Object([
-    ("ok", @tracing.Bool(true)),
+    ("ok", Bool(true)),
     ("user", user.into_value()),
   ])
   @debug.assert_eq(
@@ -252,7 +249,7 @@ test "fields accept custom values" {
     payload.to_json_string(),
   )
   let field = @tracing.field("user", user)
-  assert_true(field.value is @tracing.Object(_))
+  assert_true(field.value is Object(_))
 }
 ```
 
@@ -268,11 +265,11 @@ async test "with_span creates a child context and closes automatically" {
   let ctx = readme_root_ctx(@tracing.Dispatch::from_subscriber(capture))
   ignore(
     ctx.with_span(
-      @tracing.Info,
+      Info,
       "handle_request",
       request_ctx => {
         request_ctx.event(
-          @tracing.Info,
+          Info,
           "validated",
           fields=[
             @tracing.field("method", "GET"),
@@ -379,7 +376,7 @@ test "manual span handles support record link and close" {
   let ctx = readme_root_ctx(@tracing.Dispatch::from_subscriber(capture))
 
   let (cause_handle, cause_ctx) = ctx.span(
-    @tracing.Info,
+    Info,
     "cache_lookup",
     target="db",
     loc=readme_source_loc("cache-lookup"),
@@ -390,13 +387,13 @@ test "manual span handles support record link and close" {
   ignore(cause_handle.close())
 
   let (handle, child_ctx) = ctx.span(
-    @tracing.Info,
+    Info,
     "db_query",
     target="db",
     loc=readme_source_loc("db-query"),
   )
   child_ctx.event(
-    @tracing.Info,
+    Info,
     "sql_built",
     target="db",
     loc=readme_source_loc("sql-built"),
@@ -405,7 +402,7 @@ test "manual span handles support record link and close" {
   // started, attach a causal link, and choose the final status explicitly.
   assert_true(handle.record([@tracing.field("rows", 3)]))
   assert_true(handle.follows_from(cause))
-  assert_true(handle.close(status=@tracing.SpanStatus::Error, error="timeout"))
+  assert_true(handle.close(status=Error, error="timeout"))
 
   // The starts prove both spans belong to the same trace. They are sibling
   // spans in that trace tree.
@@ -549,18 +546,18 @@ test "fanout filters lanes independently" {
   let dispatch = @tracing.Dispatch::fanout([
     @tracing.Dispatch::from_subscriber(left),
     @tracing.Dispatch::from_subscriber(right).filtered(
-      @tracing.TargetFilter({ "http.server": @tracing.Info }),
+      TargetFilter({ "http.server": Info }),
     ),
   ])
   let ctx = readme_root_ctx(dispatch)
   ctx.event(
-    @tracing.Info,
+    Info,
     "allowed",
     target="http.server",
     loc=readme_source_loc("fanout-allowed"),
   )
   ctx.event(
-    @tracing.Info,
+    Info,
     "blocked",
     target="db",
     loc=readme_source_loc("fanout-blocked"),
@@ -671,7 +668,7 @@ async test "spawn helpers preserve explicit relationships" {
   // relationships to the current span: reuse it, create a child, or create a
   // follower linked by causality.
   ctx.with_span(
-    @tracing.Info,
+    Info,
     "parent",
     parent_ctx => {
       let parent = parent_ctx.current_span().unwrap()
@@ -681,7 +678,7 @@ async test "spawn helpers preserve explicit relationships" {
           parent_ctx,
           inherited_ctx => {
             inherited_ctx.event(
-              @tracing.Info,
+              Info,
               "inside_inherit",
               target="readme.async",
               loc=readme_source_loc("inside-inherit"),
@@ -692,7 +689,7 @@ async test "spawn helpers preserve explicit relationships" {
         let child_task : @async.Task[@tracing.SpanContext] = @tracing.spawn_child_span(
           group,
           parent_ctx,
-          @tracing.Info,
+          Info,
           "child",
           target="readme.async",
           loc=readme_source_loc("child"),
@@ -701,7 +698,7 @@ async test "spawn helpers preserve explicit relationships" {
         let follower_task : @async.Task[@tracing.SpanContext] = @tracing.spawn_follower_span(
           group,
           parent_ctx,
-          @tracing.Info,
+          Info,
           "follower",
           target="readme.async",
           loc=readme_source_loc("follower"),

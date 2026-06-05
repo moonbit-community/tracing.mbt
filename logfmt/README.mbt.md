@@ -86,13 +86,11 @@ async test "with_logfmt_writer writes logfmt lines" {
   let writer = LogfmtReadmeWriter::new()
 
   with_logfmt_writer(writer, ctx => {
-    ctx.event(@tracing.Info, "ready", message?=Some("booting"), fields=[
+    ctx.event(Info, "ready", message?=Some("booting"), fields=[
       @tracing.field("worker", 1),
     ])
-    ctx.with_span(@tracing.Info, "request", request_ctx => {
-      request_ctx.event(@tracing.Warn, "slow", fields=[
-        @tracing.field("cached", false),
-      ])
+    ctx.with_span(Info, "request", request_ctx => {
+      request_ctx.event(Warn, "slow", fields=[@tracing.field("cached", false)])
     })
   })
 
@@ -123,14 +121,11 @@ async test "logfmt keeps complex fields on the line" {
   let writer = LogfmtReadmeWriter::new()
 
   with_logfmt_writer(writer, ctx => {
-    ctx.event(@tracing.Info, "complex", message?=Some("line\n\"quoted\""), fields=[
+    ctx.event(Info, "complex", message?=Some("line\n\"quoted\""), fields=[
       @tracing.field("user id/x", "req 1"),
       @tracing.field("bytes", b"hi"),
-      @tracing.field(
-        "items",
-        @tracing.Array([@tracing.Int(1), @tracing.String("two"), @tracing.Null]),
-      ),
-      @tracing.field("payload", @tracing.Object([("ok", @tracing.Bool(true))])),
+      @tracing.field("items", @tracing.Array([Int(1), String("two"), Null])),
+      @tracing.field("payload", @tracing.Object([("ok", Bool(true))])),
     ])
   })
 
@@ -162,14 +157,14 @@ async test "LogfmtRuntime flushes span links and late fields" {
       @tracing.TraceIdAllocator::new_seeded(0UL),
     )
 
-    let (cause_handle, cause_ctx) = ctx.span(@tracing.Info, "cache_lookup")
+    let (cause_handle, cause_ctx) = ctx.span(Info, "cache_lookup")
     let cause = cause_ctx.current_span().unwrap()
     ignore(cause_handle.close())
 
-    let (handle, _child_ctx) = ctx.span(@tracing.Info, "db_query")
+    let (handle, _child_ctx) = ctx.span(Info, "db_query")
     ignore(handle.record([@tracing.field("rows", 3)]))
     ignore(handle.follows_from(cause))
-    ignore(handle.close(status=@tracing.Error, error="timeout"))
+    ignore(handle.close(status=Error, error="timeout"))
 
     runtime.flush()
     runtime.shutdown()

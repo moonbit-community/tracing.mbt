@@ -102,13 +102,11 @@ async test "with_json_writer writes JSON lines" {
   let writer = JsonlReadmeWriter::new()
 
   with_json_writer(writer, ctx => {
-    ctx.event(@tracing.Info, "ready", message?=Some("booting"), fields=[
+    ctx.event(Info, "ready", message?=Some("booting"), fields=[
       @tracing.field("worker", 1),
     ])
-    ctx.with_span(@tracing.Info, "request", request_ctx => {
-      request_ctx.event(@tracing.Warn, "slow", fields=[
-        @tracing.field("cached", false),
-      ])
+    ctx.with_span(Info, "request", request_ctx => {
+      request_ctx.event(Warn, "slow", fields=[@tracing.field("cached", false)])
     })
   })
 
@@ -188,14 +186,14 @@ async test "manual span operations become dedicated JSON line kinds" {
   let writer = JsonlReadmeWriter::new()
 
   with_json_writer(writer, ctx => {
-    let (cause_handle, cause_ctx) = ctx.span(@tracing.Info, "cache_lookup")
+    let (cause_handle, cause_ctx) = ctx.span(Info, "cache_lookup")
     let cause = cause_ctx.current_span().unwrap()
     ignore(cause_handle.close())
 
-    let (handle, _child_ctx) = ctx.span(@tracing.Info, "db_query")
+    let (handle, _child_ctx) = ctx.span(Info, "db_query")
     ignore(handle.record([@tracing.field("rows", 3)]))
     ignore(handle.follows_from(cause))
-    ignore(handle.close(status=@tracing.Error, error="timeout"))
+    ignore(handle.close(status=Error, error="timeout"))
   })
 
   let lines = writer.json_lines()
@@ -259,7 +257,7 @@ async test "JsonRuntime supports explicit flush shutdown and stats" {
       runtime.dispatch(),
       @tracing.TraceIdAllocator::new_seeded(0UL),
     )
-    ctx.event(@tracing.Info, "prefetch")
+    ctx.event(Info, "prefetch")
     runtime.flush()
     runtime.shutdown()
     runtime.stats()

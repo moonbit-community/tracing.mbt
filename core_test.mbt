@@ -2,6 +2,15 @@
 suberror TestErr derive(Debug)
 
 ///|
+async fn[X] result_of(f : async () -> X) -> Result[X, Error] {
+  try f() catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
+}
+
+///|
 struct Capture {
   starts : Ref[Array[SpanStart]]
   records : Ref[Array[SpanRecord]]
@@ -57,11 +66,11 @@ impl Subscriber for Capture with fn on_span_link(self, record) {
 ///|
 test "Value JSON encoding preserves order and scalar fidelity" {
   let encoded = @tracing.Object([
-    ("int64", @tracing.Int64(@string.parse_int64("9007199254740993"))),
-    ("uint64", @tracing.UInt64(@string.parse_uint64("18446744073709551615"))),
-    ("text", @tracing.String("line\n\"quoted\"")),
-    ("bytes", @tracing.Bytes(b"hi")),
-    ("items", @tracing.Array([@tracing.Bool(true), @tracing.Null])),
+    ("int64", Int64(@string.parse_int64("9007199254740993"))),
+    ("uint64", UInt64(@string.parse_uint64("18446744073709551615"))),
+    ("text", String("line\n\"quoted\"")),
+    ("bytes", Bytes(b"hi")),
+    ("items", Array([Bool(true), Null])),
   ]).to_json_string()
   @debug.assert_eq(
     "{\"int64\":9007199254740993,\"uint64\":18446744073709551615,\"text\":\"line\\n\\\"quoted\\\"\",\"bytes\":\"aGk=\",\"items\":[true,null]}",
@@ -71,12 +80,7 @@ test "Value JSON encoding preserves order and scalar fidelity" {
 
 ///|
 test "panic field rejects duplicate object field names" {
-  ignore(
-    field(
-      "payload",
-      @tracing.Object([("dup", @tracing.Int(1)), ("dup", @tracing.Int(2))]),
-    ),
-  )
+  ignore(field("payload", @tracing.Object([("dup", Int(1)), ("dup", Int(2))])))
 }
 
 ///|
@@ -138,7 +142,7 @@ test "TargetFilter matches the derived module target" {
   let capture = Capture::new()
   let ctx = root_ctx(
     Dispatch::from_subscriber(capture).filtered(
-      @tracing.TargetFilter({ "moonbit-community/tracing": Info }),
+      TargetFilter({ "moonbit-community/tracing": Info }),
     ),
   )
   ctx.event(Info, "allowed")
@@ -155,7 +159,7 @@ test "TargetFilter matches the derived module target" {
 test "disabled span returns original context and disabled handle" {
   let capture = Capture::new()
   let ctx = root_ctx(
-    Dispatch::from_subscriber(capture).filtered(@tracing.LevelFilter(Warn)),
+    Dispatch::from_subscriber(capture).filtered(LevelFilter(Warn)),
   )
   let (handle, child_ctx) = ctx.span(Info, "filtered")
   @debug.assert_eq(None, handle.span_ref())
@@ -195,11 +199,13 @@ async test "with_span classifies cancellation and cleanup errors" {
 
   let failed = Capture::new()
   let failed_ctx = root_ctx(Dispatch::from_subscriber(failed))
-  let result : Result[Unit?, _] = try? @async.with_timeout_opt(10, () => {
-    failed_ctx.with_span(Info, "cleanup-error", _ctx => {
-      @async.sleep(100) catch {
-        _ => raise TestErr
-      }
+  let result : Result[Unit?, _] = result_of(() => {
+    @async.with_timeout_opt(10, () => {
+      failed_ctx.with_span(Info, "cleanup-error", _ctx => {
+        @async.sleep(100) catch {
+          _ => raise TestErr
+        }
+      })
     })
   })
   assert_true(result is Err(TestErr))
@@ -233,7 +239,7 @@ test "span lifecycle stays on the lanes captured at start" {
     Dispatch::fanout([
       Dispatch::from_subscriber(left),
       Dispatch::from_subscriber(right).filtered(
-        @tracing.TargetFilter({ "span-target": Info }),
+        TargetFilter({ "span-target": Info }),
       ),
     ]),
   )
@@ -257,9 +263,7 @@ async test "fanout and async propagation preserve child and follower semantics" 
   let right = Capture::new()
   let dispatch = Dispatch::fanout([
     Dispatch::from_subscriber(left),
-    Dispatch::from_subscriber(right).filtered(
-      @tracing.TargetFilter({ "allowed": Info }),
-    ),
+    Dispatch::from_subscriber(right).filtered(TargetFilter({ "allowed": Info })),
   ])
   let ctx = root_ctx(dispatch)
   ctx.with_span(Info, "parent", parent_ctx => {
@@ -328,7 +332,7 @@ test "filtered root span keeps span ids untouched" {
   let capture = Capture::new()
   let ids = TraceIdAllocator::new_seeded(0UL)
   let filtered = TraceContext::root(
-    Dispatch::from_subscriber(capture).filtered(@tracing.LevelFilter(Warn)),
+    Dispatch::from_subscriber(capture).filtered(LevelFilter(Warn)),
     ids,
   )
   let (filtered_handle, _) = filtered.span(Info, "ignored")

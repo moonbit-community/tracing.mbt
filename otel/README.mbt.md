@@ -178,10 +178,10 @@ async test "with_otel_tracer exports spans" {
 
   with_otel_tracer(tracer, ctx => {
     ctx.with_span(
-      @tracing.Info,
+      Info,
       "handle_request",
       request_ctx => {
-        request_ctx.event(@tracing.Info, "validated", fields=[
+        request_ctx.event(Info, "validated", fields=[
           @tracing.field("route", "/health"),
         ])
       },
@@ -196,7 +196,7 @@ async test "with_otel_tracer exports spans" {
   let spans = exporter.finished_spans()
   @debug.assert_eq(1, spans.length())
   @debug.assert_eq(spans[0].name, "handle_request")
-  @debug.assert_eq(spans[0].kind, @sdktrace.Server)
+  @debug.assert_eq(spans[0].kind, Server)
   @debug.assert_eq(spans[0].events.length(), 1)
 }
 ```
@@ -218,7 +218,7 @@ async test "with_global_otel_tracer uses the global provider" {
   @global.set_tracer_provider(provider)
 
   with_global_otel_tracer("readme-global", ctx => {
-    ctx.with_span(@tracing.Info, "job", _job_ctx => ())
+    ctx.with_span(Info, "job", _job_ctx => ())
   })
 
   @debug.assert_eq(1, exporter.finished_spans().length())
@@ -249,7 +249,7 @@ async test "current_context exposes the active OpenTelemetry span" {
       runtime.dispatch(),
       @tracing.TraceIdAllocator::new_seeded(0UL),
     )
-    let (handle, child_ctx) = ctx.span(@tracing.Info, "work")
+    let (handle, child_ctx) = ctx.span(Info, "work")
     let otel_context = runtime.current_context(child_ctx)
     assert_true(otel_context.span_context().unwrap().is_valid())
     ignore(handle.close())

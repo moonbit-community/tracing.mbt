@@ -186,52 +186,50 @@ pub fn OtelOptions::new(
 ///|
 fn level_name(level : @tracing.Level) -> String {
   match level {
-    @tracing.Trace => "trace"
-    @tracing.Debug => "debug"
-    @tracing.Info => "info"
-    @tracing.Warn => "warn"
-    @tracing.Error => "error"
+    Trace => "trace"
+    Debug => "debug"
+    Info => "info"
+    Warn => "warn"
+    Error => "error"
   }
 }
 
 ///|
 fn tracing_value_to_text(value : @tracing.Value) -> String {
   match value {
-    @tracing.Null => "null"
-    @tracing.Bool(value) => value.to_string()
-    @tracing.Int(value) => value.to_string()
-    @tracing.Int64(value) => value.to_string()
-    @tracing.UInt(value) => value.to_string()
-    @tracing.UInt64(value) => value.to_string()
-    @tracing.Double(value) => value.to_string()
-    @tracing.String(value) => value
-    @tracing.Bytes(value) => @base64.encode(value[:])
-    @tracing.Array(values) => @tracing.Array(values).to_json_string()
-    @tracing.Object(entries) => @tracing.Object(entries).to_json_string()
+    Null => "null"
+    Bool(value) => value.to_string()
+    Int(value) => value.to_string()
+    Int64(value) => value.to_string()
+    UInt(value) => value.to_string()
+    UInt64(value) => value.to_string()
+    Double(value) => value.to_string()
+    String(value) => value
+    Bytes(value) => @base64.encode(value[:])
+    Array(values) => @tracing.Array(values).to_json_string()
+    Object(entries) => @tracing.Object(entries).to_json_string()
   }
 }
 
 ///|
 fn tracing_value_to_otel(value : @tracing.Value) -> @common.Value {
   match value {
-    @tracing.Null => @common.String("null")
-    @tracing.Bool(value) => @common.Bool(value)
-    @tracing.Int(value) => @common.Int64(value.to_int64())
-    @tracing.Int64(value) => @common.Int64(value)
-    @tracing.UInt(value) => @common.Int64(value.to_int64())
-    @tracing.UInt64(value) =>
+    Null => String("null")
+    Bool(value) => Bool(value)
+    Int(value) => Int64(value.to_int64())
+    Int64(value) => Int64(value)
+    UInt(value) => Int64(value.to_int64())
+    UInt64(value) =>
       if value <= max_int64_as_uint64 {
-        @common.Int64(value.reinterpret_as_int64())
+        Int64(value.reinterpret_as_int64())
       } else {
-        @common.String(value.to_string())
+        String(value.to_string())
       }
-    @tracing.Double(value) => @common.Double(value)
-    @tracing.String(value) => @common.String(value)
-    @tracing.Bytes(value) => @common.Bytes(value)
-    @tracing.Array(values) =>
-      @common.Array(values.map(value => tracing_value_to_otel(value)))
-    @tracing.Object(entries) =>
-      @common.String(@tracing.Object(entries).to_json_string())
+    Double(value) => Double(value)
+    String(value) => String(value)
+    Bytes(value) => Bytes(value)
+    Array(values) => Array(values.map(value => tracing_value_to_otel(value)))
+    Object(entries) => String(@tracing.Object(entries).to_json_string())
   }
 }
 
@@ -250,18 +248,16 @@ fn append_metadata_attributes(
   options : OtelOptions,
 ) -> Unit {
   if options.with_target {
-    attributes.push(
-      @common.KeyValue::new("target", @common.String(metadata.target)),
-    )
+    attributes.push(@common.KeyValue::new("target", String(metadata.target)))
   }
   if options.with_level {
     attributes.push(
-      @common.KeyValue::new("level", @common.String(level_name(metadata.level))),
+      @common.KeyValue::new("level", String(level_name(metadata.level))),
     )
   }
   if options.with_location {
     attributes.push(
-      @common.KeyValue::new("loc", @common.String(metadata.loc.to_string())),
+      @common.KeyValue::new("loc", String(metadata.loc.to_string())),
     )
   }
 }
@@ -301,7 +297,7 @@ fn event_attributes(
 ) -> Array[@common.KeyValue] {
   let attributes = attributes_from_fields(record.fields, skip_special=false)
   if record.message is Some(message) {
-    attributes.push(@common.KeyValue::new("message", @common.String(message)))
+    attributes.push(@common.KeyValue::new("message", String(message)))
   }
   append_metadata_attributes(attributes, record.metadata, options)
   attributes
@@ -310,11 +306,11 @@ fn event_attributes(
 ///|
 fn parse_span_kind(value : @tracing.Value) -> @trace.SpanKind? {
   match tracing_value_to_text(value).to_lower() {
-    "internal" => Some(@trace.Internal)
-    "client" => Some(@trace.Client)
-    "server" => Some(@trace.Server)
-    "producer" => Some(@trace.Producer)
-    "consumer" => Some(@trace.Consumer)
+    "internal" => Some(Internal)
+    "client" => Some(Client)
+    "server" => Some(Server)
+    "producer" => Some(Producer)
+    "consumer" => Some(Consumer)
     _ => None
   }
 }
@@ -322,9 +318,9 @@ fn parse_span_kind(value : @tracing.Value) -> @trace.SpanKind? {
 ///|
 fn parse_status_code(value : @tracing.Value) -> @trace.StatusCode? {
   match tracing_value_to_text(value).to_lower() {
-    "unset" => Some(@trace.Unset)
-    "ok" => Some(@trace.Ok)
-    "error" => Some(@trace.Error)
+    "unset" => Some(Unset)
+    "ok" => Some(Ok)
+    "error" => Some(Error)
     _ => None
   }
 }
@@ -359,9 +355,9 @@ fn extract_span_specials(fields : ArrayView[@tracing.Field]) -> SpanSpecials {
 ///|
 fn status_priority(code : @trace.StatusCode) -> Int {
   match code {
-    @trace.Unset => 0
-    @trace.Error => 1
-    @trace.Ok => 2
+    Unset => 0
+    Error => 1
+    Ok => 2
   }
 }
 
@@ -371,9 +367,9 @@ fn status_from_code(
   description : String?,
 ) -> @trace.Status {
   match code {
-    @trace.Unset => @trace.Status::unset()
-    @trace.Ok => @trace.Status::ok()
-    @trace.Error => @trace.Status::error(description~)
+    Unset => @trace.Status::unset()
+    Ok => @trace.Status::ok()
+    Error => @trace.Status::error(description~)
   }
 }
 
@@ -520,7 +516,7 @@ impl @tracing.Subscriber for OtelSubscriber with fn on_event(self, record) {
   guard self.lookup_state(span_context) is Some(state) else { return }
   let attributes = event_attributes(record, self.options)
   state.span.add_event(record.metadata.name, attributes~)
-  if record.metadata.level == @tracing.Error {
+  if record.metadata.level == Error {
     let description = match record.message {
       Some(message) => Some(message)
       None => Some(record.metadata.name)
@@ -548,13 +544,12 @@ impl @tracing.Subscriber for OtelSubscriber with fn on_span_end(self, record) {
   ignore(self.span_states.val.remove(record.span))
   self.refresh_unclosed()
   match record.status {
-    @tracing.Ok =>
+    Ok =>
       if state.status.val is None {
         state.apply_status(@trace.Status::ok())
       }
-    @tracing.Error =>
-      state.apply_status(@trace.Status::error(description=record.error))
-    @tracing.Cancelled => {
+    Error => state.apply_status(@trace.Status::error(description=record.error))
+    Cancelled => {
       let description = match record.error {
         Some(error) => Some(error)
         None => Some("cancelled")
@@ -799,14 +794,12 @@ pub fn[X] OtelRuntime::start_in(
   guard options.shutdown_timeout_ms > 0 else {
     abort("OtelOptions.shutdown_timeout_ms must be positive")
   }
-  let end_queue = @async.Queue(kind=@aqueue.Blocking(options.queue_capacity))
+  let end_queue = @async.Queue(kind=Blocking(options.queue_capacity))
   let control_queue = @async.Queue(
-    kind=@aqueue.Blocking(options.control_queue_capacity),
+    kind=Blocking(options.control_queue_capacity),
   )
-  let ack_queue = @async.Queue(
-    kind=@aqueue.Blocking(options.ack_queue_capacity),
-  )
-  let wake_queue = @async.Queue(kind=@aqueue.DiscardLatest(1))
+  let ack_queue = @async.Queue(kind=Blocking(options.ack_queue_capacity))
+  let wake_queue = @async.Queue(kind=DiscardLatest(1))
   let accepting = Ref(true)
   let dropped_records = Ref(0)
   let unclosed_spans = Ref(0)
@@ -832,7 +825,7 @@ pub fn[X] OtelRuntime::start_in(
     control_queue,
     ack_queue,
     wake_queue,
-    control_gate: @async.Semaphore(1),
+    control_gate: Semaphore(1),
     next_command_id: Ref(0L),
     dropped_records,
     unclosed_spans,
