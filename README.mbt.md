@@ -2,9 +2,9 @@
 
 Structured tracing for MoonBit with explicit context propagation.
 
-This package keeps tracing state in normal values. You create a root
-`TraceContext`, pass it where work happens, and keep async task relationships
-and handoffs explicit.
+Tracing state lives in normal values. Create a root `TraceContext`, pass it to
+the work that needs tracing, and keep async task relationships and handoffs
+explicit.
 
 The repository exposes four packages:
 
@@ -17,8 +17,8 @@ The repository exposes four packages:
 - `moonbit-community/tracing/otel`: a bridge that exports tracing spans through
   an OpenTelemetry trace `Tracer`.
 
-Every MoonBit block below uses `mbt check`, so the examples participate in
-`moon check` and `moon test`.
+Every MoonBit block below uses `mbt check`. The examples participate in `moon
+check` and `moon test`.
 
 ## Shared Helpers
 
@@ -108,7 +108,7 @@ impl @io.Writer for ReadmeSink with fn write_once(self, _buf, offset~, len~) {
 
 ## Quick Start
 
-If you want useful output immediately, start with the `jsonl` package.
+For useful output immediately, start with the `jsonl` package.
 `with_json_writer` creates a root context, writes events and spans as JSON
 Lines, and shuts the runtime down before the scope exits.
 
@@ -134,8 +134,8 @@ async test "quick start with json writer" {
       fields=[@tracing.field("request_id", "req-1")],
     )
   })
-  // This is a smoke test for the convenience helper: if the sink saw writes,
-  // the helper created a root context, delivered records, and flushed on exit.
+  // A write confirms that the helper created a root context, delivered records,
+  // and flushed on exit.
   assert_true(sink.writes.val > 0)
 }
 ```
@@ -143,9 +143,10 @@ async test "quick start with json writer" {
 ## Root Traces
 
 Create a root context with `TraceContext::root(dispatch, trace_ids)`. Trace ids
-are allocated lazily. Filtered-out callsites do not consume an id. Deterministic
-allocators created with `TraceIdAllocator::new_seeded` reject the maximum Int64
-seed because the first allocation increments the seed before materializing an id.
+are allocated lazily. Filtered-out callsites leave the allocator unchanged.
+Deterministic allocators created with `TraceIdAllocator::new_seeded` reject the
+maximum Int64 seed because the first allocation increments the seed before
+materializing an id.
 
 ```mbt check
 ///|
@@ -312,7 +313,7 @@ async test "with_span creates a child context and closes automatically" {
     ),
   )
   // The nested event keeps the same trace id and points at the span created by
-  // `with_span`, so readers can tell the callback ran inside that scope.
+  // `with_span`. The callback ran inside that scope.
   debug_inspect(
     capture.events[0],
     content=(
@@ -339,8 +340,8 @@ async test "with_span creates a child context and closes automatically" {
       #|}
     ),
   )
-  // A successful callback must produce exactly one matching `SpanEnd` with
-  // status `Ok`; callers do not close the span manually.
+  // A successful callback produces one matching `SpanEnd` with status `Ok`.
+  // `with_span` closes the span.
   debug_inspect(
     capture.ends[0],
     content=(
@@ -362,8 +363,8 @@ async test "with_span creates a child context and closes automatically" {
 
 ## Manual Span Lifecycle
 
-If you need more control, call `TraceContext::span` directly. That returns a
-`SpanHandle` plus the child context for work inside the span.
+For direct lifecycle control, call `TraceContext::span`. It returns a
+`SpanHandle` and the child context for work inside the span.
 
 `SpanHandle` lets you:
 
@@ -383,8 +384,8 @@ test "manual span handles support record link and close" {
     target="db",
     loc=readme_source_loc("cache-lookup"),
   )
-  // Start and close an earlier sibling span so the next span can reference it
-  // through `follows_from` as a causal predecessor.
+  // An earlier sibling span can be referenced through `follows_from` as a
+  // causal predecessor.
   let cause = cause_ctx.current_span().unwrap()
   ignore(cause_handle.close())
 
@@ -451,8 +452,8 @@ test "manual span handles support record link and close" {
       #|]
     ),
   )
-  // Late fields are emitted as a separate `SpanRecord`, not folded back into
-  // the original `SpanStart`.
+  // Late fields are emitted as a separate `SpanRecord`. The original
+  // `SpanStart` stays unchanged.
   debug_inspect(
     capture.records[0],
     content=(
@@ -530,7 +531,7 @@ test "manual span handles support record link and close" {
 
 - `Dispatch::from_subscriber(subscriber)` creates one lane
 - `Dispatch::fanout([...])` combines multiple lanes
-- `dispatch.filtered(filter)` applies metadata-only filtering
+- `dispatch.filtered(filter)` applies metadata filtering
 
 The available filters are:
 
@@ -540,11 +541,11 @@ The available filters are:
 
 ```mbt check
 ///|
-test "fanout can filter one lane without affecting another" {
+test "fanout filters lanes independently" {
   let left = ReadmeCapture::new()
   let right = ReadmeCapture::new()
-  // The left lane is unfiltered. The right lane only keeps records whose
-  // target matches `http.server`.
+  // The left lane is unfiltered. The right lane keeps records whose target
+  // matches `http.server`.
   let dispatch = @tracing.Dispatch::fanout([
     @tracing.Dispatch::from_subscriber(left),
     @tracing.Dispatch::from_subscriber(right).filtered(
@@ -564,7 +565,7 @@ test "fanout can filter one lane without affecting another" {
     target="db",
     loc=readme_source_loc("fanout-blocked"),
   )
-  // The unfiltered lane still receives both events.
+  // The unfiltered lane receives both events.
   debug_inspect(
     left.events,
     content=(
@@ -598,7 +599,7 @@ test "fanout can filter one lane without affecting another" {
       #|]
     ),
   )
-  // The filtered lane only sees the event that matched its target filter.
+  // The filtered lane sees the event that matched its target filter.
   debug_inspect(
     right.events,
     content=(
@@ -632,17 +633,16 @@ how the new task should relate to the current trace.
 - `spawn_follower_span`: create a new span with a follows-from link that
   records a causal relationship
 
-The choice is mostly about what relationship you want the trace to express.
-In MoonBit, these helpers are for single-threaded async tasks; they describe
-task relationships and handoff, not parallel execution on multiple threads.
+Choose the helper that matches the relationship the trace should express.
+In MoonBit, these helpers model single-threaded async task relationships and
+handoff.
 
-- Use `spawn_inherit` when the new task is still the same logical operation and
-  a separate span would just add noise. Typical cases are splitting one step
-  into helper tasks, breaking a request flow into smaller async pieces, or
-  moving small bookkeeping work onto another task while still wanting all
-  events to appear under the current span. The inherited task has no separate
-  duration, status, or fields; the trace still shows the parent span doing that
-  work.
+- Use `spawn_inherit` when the new task is part of the same logical operation.
+  A separate span would add noise. Typical cases are splitting one step into
+  helper tasks, breaking a request flow into smaller async pieces, or moving
+  small bookkeeping work onto another task. Events from the inherited task
+  appear under the current span. The inherited task has no separate duration,
+  status, or fields.
 - Use `spawn_child_span` when the new task is a real sub-step that should be
   timed and described independently. This is the usual choice for branched
   async work such as querying a shard, calling another service, processing one
@@ -652,15 +652,14 @@ task relationships and handoff, not parallel execution on multiple threads.
   task should appear as a related handoff. Typical cases are enqueueing a job
   for later execution, triggering a webhook, handing work off to another
   pipeline, or starting deferred async work that may outlive the parent span.
-  The follower stays in the same trace, so logs stay correlated, and the trace
-  records the relationship as a causal link.
+  The follower stays in the same trace for log correlation. The trace records
+  the relationship as a causal link.
 
 A practical rule of thumb:
 
-- if the parent is still "doing the same thing", use `spawn_inherit`
-- if the parent started a sub-step and you want nested timing, use
-  `spawn_child_span`
-- if the parent triggered or handed off work, use `spawn_follower_span`
+- Parent continues the same operation: use `spawn_inherit`
+- Parent starts a sub-step with nested timing: use `spawn_child_span`
+- Parent triggers or hands off work: use `spawn_follower_span`
 
 ```mbt check
 ///|
@@ -710,7 +709,7 @@ async test "spawn helpers preserve explicit relationships" {
         )
 
         // `spawn_inherit` reuses the exact current span. The other two helpers
-        // create distinct spans, so they must not compare equal to `parent`.
+        // create distinct spans with different `SpanContext` values.
         assert_true(inherited_task.wait() == Some(parent))
         assert_true(child_task.wait() != parent)
         assert_true(follower_task.wait() != parent)
@@ -744,7 +743,7 @@ async test "spawn helpers preserve explicit relationships" {
       #|}
     ),
   )
-  // A child span keeps the trace id but records the parent edge explicitly.
+  // A child span keeps the trace id and records the parent edge explicitly.
   debug_inspect(
     capture.start_named("child"),
     content=(
@@ -897,7 +896,7 @@ The main public entry points are:
 - `JsonRuntime::stats()`
 
 `JsonRuntime::stats().unclosed_spans` is a live snapshot of spans started
-through the runtime dispatch whose handles have not closed yet.
+through the runtime dispatch with open handles.
 
 ## logfmt Package
 
@@ -925,7 +924,7 @@ The main public entry points are:
 - `LogfmtRuntime::stats()`
 
 `LogfmtRuntime::stats().unclosed_spans` is a live snapshot of spans started
-through the runtime dispatch whose handles have not closed yet.
+through the runtime dispatch with open handles.
 
 ## OpenTelemetry Package
 

@@ -771,16 +771,16 @@ pub fn[X] LogfmtRuntime::start_in(
   guard options.shutdown_timeout_ms > 0 else {
     abort("LogfmtOptions.shutdown_timeout_ms must be positive")
   }
-  let record_queue = @aqueue.Queue::new(
+  let record_queue = @async.Queue(
     kind=@aqueue.Blocking(options.record_queue_capacity),
   )
-  let control_queue = @aqueue.Queue::new(
+  let control_queue = @async.Queue(
     kind=@aqueue.Blocking(options.control_queue_capacity),
   )
-  let ack_queue = @aqueue.Queue::new(
+  let ack_queue = @async.Queue(
     kind=@aqueue.Blocking(options.ack_queue_capacity),
   )
-  let wake_queue = @aqueue.Queue::new(kind=@aqueue.DiscardLatest(1))
+  let wake_queue = @async.Queue(kind=@aqueue.DiscardLatest(1))
   let dropped_records = Ref(0)
   let writer_errors = Ref(0)
   let writer_error_text = Ref(None)
