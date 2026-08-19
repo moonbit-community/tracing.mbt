@@ -13,8 +13,4 @@ import {
   "moonbitlang/core/json",
 } for "test"
 
-warnings = "-29"
-
-options(
-  targets: { "README.mbt.md": [ "native" ], "stdio.mbt": [ "native" ] },
-)
+supported_targets = "wasm+native"

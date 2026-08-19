@@ -148,13 +148,13 @@ async test "spawn_child_span preserves caller callsite across packages" {
 async test "with_json_writer emits JSON lines" {
   let writer = MemoryWriter::new()
   with_json_writer(writer, ctx => {
-    ctx.event(Info, "ready", message?=Some("booting"), fields=[
+    ctx.event(Info, "ready", message="booting", fields=[
       @tracing.field("worker", 1),
     ])
     ctx.with_span(Info, "parent", parent => {
       parent.event(Warn, "warn", fields=[@tracing.field("ok", true)])
       parent.with_span(Info, "child", child => {
-        child.event(Error, "boom", message?=Some("bad"))
+        child.event(Error, "boom", message="bad")
       })
     })
   })

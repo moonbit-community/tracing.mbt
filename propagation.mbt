@@ -201,7 +201,7 @@ pub impl Default for TraceState with fn default() {
 
 ///|
 pub fn TraceState::empty() -> TraceState {
-  TraceState::default()
+  Default::default()
 }
 
 ///|
@@ -247,7 +247,7 @@ pub fn TraceState::from_header(header : StringView) -> TraceState? {
     return Some(TraceState::empty())
   }
   let entries : Array[(String, String)] = []
-  let seen : Map[String, Bool] = {}
+  let seen : Map[String, Bool] = Map([])
   for item in header.split(",") {
     let item = item.trim()
     guard !item.is_empty() else { return None }
@@ -329,7 +329,7 @@ pub impl Default for Baggage with fn default() {
 
 ///|
 pub fn Baggage::empty() -> Baggage {
-  Baggage::default()
+  Default::default()
 }
 
 ///|
@@ -379,7 +379,7 @@ pub fn Baggage::from_header(header : StringView) -> Baggage? {
     return Some(Baggage::empty())
   }
   let entries : Array[BaggageEntry] = []
-  let seen : Map[String, Bool] = {}
+  let seen : Map[String, Bool] = Map([])
   for item in header.split(",") {
     let item = item.trim()
     guard !item.is_empty() else { return None }

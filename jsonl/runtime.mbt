@@ -566,17 +566,8 @@ async fn[X] JsonRuntime::with_control_gate(
   f : async () -> X,
 ) -> X {
   self.control_gate.acquire()
-  try f() catch {
-    err => {
-      self.control_gate.release()
-      raise err
-    }
-  } noraise {
-    value => {
-      self.control_gate.release()
-      value
-    }
-  }
+  defer self.control_gate.release()
+  f()
 }
 
 ///|
@@ -620,7 +611,7 @@ async fn JsonRuntime::await_ack_bounded(
 pub fn[X] JsonRuntime::start_in(
   group : @async.TaskGroup[X],
   writer : &@io.Writer,
-  options? : JsonOptions = JsonOptions::default(),
+  options? : JsonOptions = Default::default(),
 ) -> JsonRuntime {
   guard options.record_queue_capacity > 0 else {
     abort("JsonOptions.record_queue_capacity must be positive")
@@ -756,7 +747,7 @@ pub async fn JsonRuntime::shutdown(self : JsonRuntime) -> Unit {
 /// Run `f` with a fresh root trace context that writes JSON Lines to `writer`.
 pub async fn[X] with_json_writer(
   writer : &@io.Writer,
-  options? : JsonOptions = JsonOptions::default(),
+  options? : JsonOptions = Default::default(),
   f : async (@tracing.TraceContext) -> X,
 ) -> X {
   @async.with_task_group(group => {

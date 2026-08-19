@@ -254,4 +254,3 @@ pub(open) trait Subscriber {
   fn on_span_end(Self, SpanEnd) -> Unit
   fn on_span_link(Self, SpanLink) -> Unit = _
 }
-
