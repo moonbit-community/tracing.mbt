@@ -117,7 +117,7 @@ Lines, and shuts the runtime down before the scope exits.
 async test "quick start with json writer" {
   let sink = ReadmeSink::new()
   @jsonl.with_json_writer(sink, ctx => {
-    ctx.event(Info, "app_started", message?=Some("booting"), fields=[
+    ctx.event(Info, "app_started", message="booting", fields=[
       @tracing.field("version", "0.1.0"),
       @tracing.field("port", 3000),
     ])
@@ -242,7 +242,7 @@ test "fields accept custom values" {
   // same `IntoValue` conversion automatically.
   let payload = @tracing.Object([
     ("ok", Bool(true)),
-    ("user", user.into_value()),
+    ("user", @tracing.IntoValue::into_value(user)),
   ])
   @debug.assert_eq(
     "{\"ok\":true,\"user\":{\"id\":7,\"name\":\"alice\"}}",

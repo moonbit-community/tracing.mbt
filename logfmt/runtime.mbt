@@ -697,17 +697,8 @@ async fn[X] LogfmtRuntime::with_control_gate(
   f : async () -> X,
 ) -> X {
   self.control_gate.acquire()
-  try f() catch {
-    err => {
-      self.control_gate.release()
-      raise err
-    }
-  } noraise {
-    value => {
-      self.control_gate.release()
-      value
-    }
-  }
+  defer self.control_gate.release()
+  f()
 }
 
 ///|
@@ -751,7 +742,7 @@ async fn LogfmtRuntime::await_ack_bounded(
 pub fn[X] LogfmtRuntime::start_in(
   group : @async.TaskGroup[X],
   writer : &@io.Writer,
-  options? : LogfmtOptions = LogfmtOptions::default(),
+  options? : LogfmtOptions = Default::default(),
 ) -> LogfmtRuntime {
   guard options.record_queue_capacity > 0 else {
     abort("LogfmtOptions.record_queue_capacity must be positive")
@@ -887,7 +878,7 @@ pub async fn LogfmtRuntime::shutdown(self : LogfmtRuntime) -> Unit {
 /// Run `f` with a fresh root trace context that writes logfmt to `writer`.
 pub async fn[X] with_logfmt_writer(
   writer : &@io.Writer,
-  options? : LogfmtOptions = LogfmtOptions::default(),
+  options? : LogfmtOptions = Default::default(),
   f : async (@tracing.TraceContext) -> X,
 ) -> X {
   @async.with_task_group(group => {

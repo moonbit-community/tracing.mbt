@@ -12,3 +12,5 @@ import {
   "moonbitlang/async/io",
   "moonbit-community/tracing/jsonl",
 } for "test"
+
+supported_targets = "all"

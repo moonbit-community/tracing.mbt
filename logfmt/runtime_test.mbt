@@ -295,7 +295,7 @@ async test "LogfmtRuntime encodes event and span lifecycle records" {
     ctx.event(
       Info,
       "ready",
-      message?=Some("booting"),
+      message="booting",
       target="app",
       fields=[@tracing.field("worker", 1)],
       loc=fake_source_loc("event-ready"),
@@ -310,7 +310,7 @@ async test "LogfmtRuntime encodes event and span lifecycle records" {
     child_ctx.event(
       Warn,
       "slow",
-      message?=Some("retrying"),
+      message="retrying",
       target="http",
       fields=[@tracing.field("cached", false)],
       loc=fake_source_loc("event-slow"),
@@ -385,7 +385,7 @@ async test "LogfmtRuntime quotes strings and preserves duplicate tracing fields"
     ctx.event(
       Info,
       "complex",
-      message?=Some("line\n\"quoted\""),
+      message="line\n\"quoted\"",
       target="tests",
       fields=[
         @tracing.field("user id/x", "req 1"),

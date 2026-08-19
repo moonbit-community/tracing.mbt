@@ -87,7 +87,7 @@ test "panic field rejects duplicate object field names" {
 test "root event carries trace id and derived target" {
   let capture = Capture::new()
   let ctx = root_ctx(Dispatch::from_subscriber(capture))
-  ctx.event(Info, "ready", message?=Some("booting"))
+  ctx.event(Info, "ready", message="booting")
   @debug.assert_eq(1, capture.events.val.length())
   let event = capture.events.val[0]
   @debug.assert_eq(None, event.span)
@@ -101,9 +101,9 @@ test "level-specific event helpers preserve level and payload" {
   let ctx = root_ctx(Dispatch::from_subscriber(capture))
   ctx.trace("trace")
   ctx.debug("debug", target="debug-target")
-  ctx.info("info", message?=Some("booting"))
+  ctx.info("info", message="booting")
   ctx.warn("warn", fields=[field("retry", true)])
-  ctx.error("error", message?=Some("boom"), target="error-target", fields=[
+  ctx.error("error", message="boom", target="error-target", fields=[
     field("code", 500),
   ])
   @debug.assert_eq(5, capture.events.val.length())

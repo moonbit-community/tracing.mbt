@@ -145,7 +145,7 @@ async test "OtelRuntime exports span lifecycle records to OpenTelemetry" {
     child_ctx.event(
       Error,
       "failed",
-      message?=Some("bad"),
+      message="bad",
       fields=[@tracing.field("rows", 3)],
       loc=fake_source_loc("event-loc"),
     )

@@ -125,7 +125,7 @@ after a successful shutdown is a no-op.
 
 ## Options
 
-`OtelOptions::default()` is suitable for most applications. Use
+The `Default` implementation for `OtelOptions` is suitable for most applications. Use
 `OtelOptions::new` when you need to tune queue sizes, timeouts, or metadata
 attributes.
 

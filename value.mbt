@@ -63,7 +63,7 @@ fn Value::assert_unique_object_fields(self : Value, path : String) -> Unit {
         values[index].assert_unique_object_fields("\{path}[\{index}]")
       }
     Object(entries) => {
-      let seen : Map[String, Bool] = {}
+      let seen : Map[String, Bool] = Map([])
       for index = 0; index < entries.length(); index = index + 1 {
         let (name, value) = entries[index]
         let entry_path = "\{path}.\{name}"

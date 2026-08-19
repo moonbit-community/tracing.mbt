@@ -16,8 +16,4 @@ import {
   "moonbit-community/opentelemetry/sdk/trace" @sdktrace,
 } for "test"
 
-warnings = "-29"
-
-options(
-  backend: [ "native" ],
-)
+supported_targets = "wasm+native"

@@ -102,7 +102,7 @@ async test "with_json_writer writes JSON lines" {
   let writer = JsonlReadmeWriter::new()
 
   with_json_writer(writer, ctx => {
-    ctx.event(Info, "ready", message?=Some("booting"), fields=[
+    ctx.event(Info, "ready", message="booting", fields=[
       @tracing.field("worker", 1),
     ])
     ctx.with_span(Info, "request", request_ctx => {
