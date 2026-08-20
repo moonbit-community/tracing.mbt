@@ -154,7 +154,7 @@ pub impl Default for OtelOptions with fn default() {
 ///|
 /// Create OpenTelemetry bridge options explicitly.
 ///
-/// All parameters are optional and default to `OtelOptions::default()`. The
+/// All parameters are optional and use the `Default` implementation. The
 /// constructor does not validate values; validation happens in
 /// `OtelRuntime::start_in`, where non-positive capacities and timeouts abort.
 pub fn OtelOptions::new(
@@ -701,17 +701,8 @@ async fn[X] OtelRuntime::with_control_gate(
   f : async () -> X,
 ) -> X {
   self.control_gate.acquire()
-  try f() catch {
-    err => {
-      self.control_gate.release()
-      raise err
-    }
-  } noraise {
-    value => {
-      self.control_gate.release()
-      value
-    }
-  }
+  defer self.control_gate.release()
+  f()
 }
 
 ///|
@@ -777,7 +768,7 @@ async fn OtelRuntime::await_shutdown_ack(
 pub fn[X] OtelRuntime::start_in(
   group : @async.TaskGroup[X],
   tracer : @trace.Tracer,
-  options? : OtelOptions = OtelOptions::default(),
+  options? : OtelOptions = Default::default(),
 ) -> OtelRuntime {
   guard options.queue_capacity > 0 else {
     abort("OtelOptions.queue_capacity must be positive")
@@ -984,7 +975,7 @@ async fn protected_shutdown(runtime : OtelRuntime) -> Result[Unit, Error] {
 /// shutdown attempt.
 pub async fn[X] with_otel_tracer(
   tracer : @trace.Tracer,
-  options? : OtelOptions = OtelOptions::default(),
+  options? : OtelOptions = Default::default(),
   f : async (@tracing.TraceContext) -> X,
 ) -> X {
   @async.with_task_group(group => {
@@ -1028,7 +1019,7 @@ pub async fn[X] with_global_otel_tracer(
   version? : String? = None,
   schema_url? : String? = None,
   attributes? : ArrayView[@common.KeyValue] = [],
-  options? : OtelOptions = OtelOptions::default(),
+  options? : OtelOptions = Default::default(),
   f : async (@tracing.TraceContext) -> X,
 ) -> X {
   with_otel_tracer(

@@ -3,8 +3,8 @@ name = "moonbit-community/tracing"
 version = "0.1.0"
 
 import {
-  "moonbitlang/async@0.19.2",
-  "moonbit-community/opentelemetry@0.1.4",
+  "moonbitlang/async@0.21.0",
+  "moonbit-community/opentelemetry@0.1.5",
 }
 
 readme = "README.mbt.md"
@@ -16,5 +16,3 @@ license = "Apache-2.0"
 keywords = [ ]
 
 description = ""
-
-preferred_target = "native"

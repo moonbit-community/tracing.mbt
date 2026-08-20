@@ -56,4 +56,3 @@ pub struct LogfmtStats {
 // Type aliases
 
 // Traits
-
