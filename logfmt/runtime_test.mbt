@@ -5,22 +5,13 @@ suberror SinkFailed derive(Debug)
 suberror UserFailed derive(Debug)
 
 ///|
-async fn[X] result_of(f : async () -> X) -> Result[X, Error] {
-  try f() catch {
-    err => Err(err)
-  } noraise {
-    value => Ok(value)
-  }
-}
-
-///|
 struct Capture {
   starts : Ref[Array[@tracing.SpanStart]]
 }
 
 ///|
 fn Capture::new() -> Capture {
-  { starts: Ref([]) }
+  { starts: Ref([]), }
 }
 
 ///|
@@ -44,14 +35,17 @@ impl @tracing.Subscriber for Capture with fn on_span_end(_self, _record) {
 ///|
 struct MemoryWriter {
   output : Ref[StringBuilder]
-  delay_ms : Int
-  fail_after : Int?
-  writes : Ref[Int]
+  delay_ms : Int32
+  fail_after : Int32?
+  writes : Ref[Int32]
 }
 
 ///|
-fn MemoryWriter::new(delay_ms? : Int = 0, fail_after? : Int) -> MemoryWriter {
-  { output: Ref(StringBuilder::new()), delay_ms, fail_after, writes: Ref(0) }
+fn MemoryWriter::new(
+  delay_ms~ : Int32 = 0,
+  fail_after? : Int32,
+) -> MemoryWriter {
+  { output: Ref(StringBuilder()), delay_ms, fail_after, writes: Ref(0), }
 }
 
 ///|
@@ -94,7 +88,7 @@ fn seeded_ctx(dispatch : @tracing.Dispatch) -> @tracing.TraceContext {
 }
 
 ///|
-fn decode_hex_digit(ch : Char) -> Int? {
+fn decode_hex_digit(ch : Char) -> Int32? {
   let code = ch.to_int()
   if code >= '0'.to_int() && code <= '9'.to_int() {
     Some(code - '0'.to_int())
@@ -120,7 +114,7 @@ fn parse_logfmt_line(line : String) -> Array[(String, String)] {
       break
     }
 
-    let key_builder = StringBuilder::new()
+    let key_builder = StringBuilder()
     while index < chars.length() && chars[index] != '=' {
       key_builder.write_char(chars[index])
       index += 1
@@ -131,7 +125,7 @@ fn parse_logfmt_line(line : String) -> Array[(String, String)] {
     let key = key_builder.to_string()
     index += 1
 
-    let value_builder = StringBuilder::new()
+    let value_builder = StringBuilder()
     if index < chars.length() && chars[index] == '"' {
       index += 1
       let mut closed = false
@@ -290,7 +284,7 @@ async test "spawn_child_span preserves caller callsite across packages" {
 async test "LogfmtRuntime encodes event and span lifecycle records" {
   let writer = MemoryWriter::new()
   let entries = @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(group, writer)
+    let runtime = @logfmt.LogfmtRuntime::start_in(group, writer)
     let ctx = seeded_ctx(runtime.dispatch())
     ctx.event(
       Info,
@@ -380,7 +374,7 @@ async test "LogfmtRuntime encodes event and span lifecycle records" {
 async test "LogfmtRuntime quotes strings and preserves duplicate tracing fields" {
   let writer = MemoryWriter::new()
   let entries = @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(group, writer)
+    let runtime = @logfmt.LogfmtRuntime::start_in(group, writer)
     let ctx = seeded_ctx(runtime.dispatch())
     ctx.event(
       Info,
@@ -425,7 +419,7 @@ async test "LogfmtRuntime maps non-finite doubles to null consistently" {
   let neg_inf = -1.0 / 0.0
   let writer = MemoryWriter::new()
   let entries = @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(group, writer)
+    let runtime = @logfmt.LogfmtRuntime::start_in(group, writer)
     let ctx = seeded_ctx(runtime.dispatch())
     ctx.event(Info, "non-finite", fields=[
       @tracing.field("nan", @tracing.Double(nan)),
@@ -453,7 +447,7 @@ async test "LogfmtRuntime maps non-finite doubles to null consistently" {
 async test "LogfmtRuntime escapes field names without collisions" {
   let writer = MemoryWriter::new()
   let entries = @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(group, writer)
+    let runtime = @logfmt.LogfmtRuntime::start_in(group, writer)
     let ctx = seeded_ctx(runtime.dispatch())
     ctx.event(Info, "escaped-fields", fields=[
       @tracing.field("user id", 1),
@@ -478,20 +472,26 @@ async test "LogfmtRuntime escapes field names without collisions" {
 ///|
 async test "with_logfmt_writer surfaces writer failures on the success path" {
   let writer = MemoryWriter::new(fail_after=0)
-  let result : Result[Unit, _] = result_of(() => {
-    with_logfmt_writer(writer, ctx => ctx.event(Info, "before-shutdown-failure"))
-  })
+  let result : Result[Unit, _] = Ok(
+    @logfmt.with_logfmt_writer(writer, ctx => {
+      ctx.event(Info, "before-shutdown-failure")
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Err(@logfmt.WriterFailed(_)))
 }
 
 ///|
 async test "with_logfmt_writer preserves error span ends precisely" {
   let writer = MemoryWriter::new()
-  let result : Result[Unit, _] = result_of(() => {
-    with_logfmt_writer(writer, ctx => {
+  let result : Result[Unit, _] = Ok(
+    @logfmt.with_logfmt_writer(writer, ctx => {
       ctx.with_span(Info, "error-span", _ctx => raise UserFailed)
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Err(UserFailed))
 
   let entries = writer.entries()
@@ -510,7 +510,7 @@ async test "with_logfmt_writer preserves error span ends precisely" {
 ///|
 async test "with_logfmt_writer preserves cancelled span ends precisely" {
   let writer = MemoryWriter::new()
-  with_logfmt_writer(writer, ctx => {
+  @logfmt.with_logfmt_writer(writer, ctx => {
     ignore(
       @async.with_timeout_opt(10, () => {
         ctx.with_span(Info, "cancelled-span", _ctx => @async.sleep(100))
@@ -532,7 +532,7 @@ async test "with_logfmt_writer preserves cancelled span ends precisely" {
 ///|
 async test "with_logfmt_writer encodes follows-from links precisely" {
   let writer = MemoryWriter::new()
-  with_logfmt_writer(writer, ctx => {
+  @logfmt.with_logfmt_writer(writer, ctx => {
     ctx.with_span(Info, "parent", parent_ctx => {
       @async.with_task_group(group => {
         let task : @async.Task[Unit] = @tracing.spawn_follower_span(
@@ -571,12 +571,14 @@ async test "with_logfmt_writer encodes follows-from links precisely" {
 ///|
 async test "with_logfmt_writer flushes accepted records on exception path" {
   let writer = MemoryWriter::new()
-  let result : Result[Unit, _] = result_of(() => {
-    with_logfmt_writer(writer, ctx => {
+  let result : Result[Unit, _] = Ok(
+    @logfmt.with_logfmt_writer(writer, ctx => {
       ctx.event(Info, "before-fail")
       raise UserFailed
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Err(UserFailed))
 
   let entries = writer.entries()
@@ -588,12 +590,14 @@ async test "with_logfmt_writer flushes accepted records on exception path" {
 ///|
 async test "with_logfmt_writer combines user and shutdown failures" {
   let writer = MemoryWriter::new(fail_after=0)
-  let result : Result[Unit, _] = result_of(() => {
-    with_logfmt_writer(writer, ctx => {
+  let result : Result[Unit, _] = Ok(
+    @logfmt.with_logfmt_writer(writer, ctx => {
       ctx.event(Info, "before-double-fail")
       raise UserFailed
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
 
   match result {
     Err(@logfmt.UserAndShutdownFailed(user_err, WriterFailed(text))) => {
@@ -608,7 +612,7 @@ async test "with_logfmt_writer combines user and shutdown failures" {
 async test "with_logfmt_writer handles enclosing cancellation without hanging" {
   let writer = MemoryWriter::new()
   let result : Unit? = @async.with_timeout_opt(10, () => {
-    with_logfmt_writer(writer, ctx => {
+    @logfmt.with_logfmt_writer(writer, ctx => {
       ctx.event(Info, "before-cancel")
       @async.sleep(100)
     })
@@ -619,18 +623,23 @@ async test "with_logfmt_writer handles enclosing cancellation without hanging" {
 ///|
 async test "with_logfmt_writer shutdown attempt stays within the configured timeout" {
   let writer = MemoryWriter::new(delay_ms=50)
-  let result : Result[Unit?, _] = result_of(() => {
+  let result : Result[Unit?, _] = Ok(
     @async.with_timeout_opt(100, () => {
-      with_logfmt_writer(
+      @logfmt.with_logfmt_writer(
         writer,
-        options=LogfmtOptions::new(command_timeout_ms=5, shutdown_timeout_ms=5),
+        options=@logfmt.LogfmtOptions::new(
+          command_timeout_ms=5,
+          shutdown_timeout_ms=5,
+        ),
         ctx => {
           ctx.event(Info, "slow")
           raise UserFailed
         },
       )
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Err(@logfmt.UserAndShutdownFailed(UserFailed, _)))
 }
 
@@ -638,10 +647,10 @@ async test "with_logfmt_writer shutdown attempt stays within the configured time
 async test "LogfmtRuntime counts dropped records when queue is full" {
   let writer = MemoryWriter::new(delay_ms=50)
   let runtime = @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(
+    let runtime = @logfmt.LogfmtRuntime::start_in(
       group,
       writer,
-      options=LogfmtOptions::new(
+      options=@logfmt.LogfmtOptions::new(
         record_queue_capacity=1,
         control_queue_capacity=2,
         ack_queue_capacity=2,
@@ -664,10 +673,10 @@ async test "LogfmtRuntime counts dropped records when queue is full" {
 async test "LogfmtRuntime flush still works when the record queue is saturated" {
   let writer = MemoryWriter::new(delay_ms=10)
   let runtime = @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(
+    let runtime = @logfmt.LogfmtRuntime::start_in(
       group,
       writer,
-      options=LogfmtOptions::new(
+      options=@logfmt.LogfmtOptions::new(
         record_queue_capacity=1,
         control_queue_capacity=1,
         ack_queue_capacity=1,
@@ -697,7 +706,7 @@ async test "LogfmtRuntime flush still works when the record queue is saturated" 
 async test "LogfmtRuntime reports unclosed spans on shutdown" {
   let writer = MemoryWriter::new()
   let runtime = @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(group, writer)
+    let runtime = @logfmt.LogfmtRuntime::start_in(group, writer)
     let ctx = root_ctx(runtime.dispatch())
     ignore(ctx.span(Info, "leaked"))
     runtime.shutdown()
@@ -710,7 +719,7 @@ async test "LogfmtRuntime reports unclosed spans on shutdown" {
 async test "LogfmtRuntime stats tracks unclosed spans before shutdown" {
   let writer = MemoryWriter::new()
   let stats = @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(group, writer)
+    let runtime = @logfmt.LogfmtRuntime::start_in(group, writer)
     let ctx = root_ctx(runtime.dispatch())
     let (handle, _) = ctx.span(Info, "live")
     let started = runtime.stats().unclosed_spans
@@ -725,17 +734,19 @@ async test "LogfmtRuntime stats tracks unclosed spans before shutdown" {
 ///|
 async test "LogfmtRuntime reports writer failures through flush" {
   let writer = MemoryWriter::new(fail_after=0)
-  let result : Result[LogfmtStats, _] = result_of(() => {
+  let result : Result[@logfmt.LogfmtStats, _] = Ok(
     @async.with_task_group(group => {
-      let runtime = LogfmtRuntime::start_in(group, writer)
+      let runtime = @logfmt.LogfmtRuntime::start_in(group, writer)
       let ctx = root_ctx(runtime.dispatch())
       ctx.event(Info, "first")
       ctx.event(Info, "second")
       runtime.flush()
       runtime.shutdown()
       runtime.stats()
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Err(@logfmt.WriterFailed(_)))
 }
 
@@ -743,12 +754,12 @@ async test "LogfmtRuntime reports writer failures through flush" {
 async test "LogfmtRuntime drops new records after a writer failure" {
   let writer = MemoryWriter::new(fail_after=0)
   let runtime = @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(group, writer)
+    let runtime = @logfmt.LogfmtRuntime::start_in(group, writer)
     let ctx = root_ctx(runtime.dispatch())
     ctx.event(Info, "first")
-    ignore(result_of(() => runtime.flush()))
+    ignore(Ok(runtime.flush()) catch { err => Err(err) })
     ctx.event(Info, "after-writer-failure")
-    ignore(result_of(() => runtime.shutdown()))
+    ignore(Ok(runtime.shutdown()) catch { err => Err(err) })
     runtime
   })
   @debug.assert_eq(1, runtime.stats().writer_errors)
@@ -758,7 +769,7 @@ async test "LogfmtRuntime drops new records after a writer failure" {
 ///|
 async test "LogfmtRuntime concurrent flush calls do not steal acknowledgements" {
   let writer = MemoryWriter::new(delay_ms=20)
-  let options = LogfmtOptions::new(
+  let options = @logfmt.LogfmtOptions::new(
     record_queue_capacity=8,
     control_queue_capacity=1,
     ack_queue_capacity=1,
@@ -767,20 +778,24 @@ async test "LogfmtRuntime concurrent flush calls do not steal acknowledgements" 
     shutdown_timeout_ms=2000,
   )
   let (first_result, second_result, stats) = @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(group, writer, options~)
+    let runtime = @logfmt.LogfmtRuntime::start_in(group, writer, options~)
     let ctx = root_ctx(runtime.dispatch())
     for _ in 0..<4 {
       ctx.event(Info, "flush-race")
     }
     let first_task : @async.Task[Result[Unit, _]] = group.spawn(() => {
-      result_of(() => runtime.flush())
+      Ok(runtime.flush()) catch {
+        err => Err(err)
+      }
     })
     let second_task : @async.Task[Result[Unit, _]] = group.spawn(() => {
-      result_of(() => runtime.flush())
+      Ok(runtime.flush()) catch {
+        err => Err(err)
+      }
     })
     let first_result = first_task.wait()
     let second_result = second_task.wait()
-    ignore(result_of(() => runtime.shutdown()))
+    ignore(Ok(runtime.shutdown()) catch { err => Err(err) })
     (first_result, second_result, runtime.stats())
   })
   assert_true(first_result is Ok(_))
@@ -792,7 +807,7 @@ async test "LogfmtRuntime concurrent flush calls do not steal acknowledgements" 
 ///|
 async test "LogfmtRuntime concurrent flush and shutdown do not steal acknowledgements" {
   let writer = MemoryWriter::new(delay_ms=20)
-  let options = LogfmtOptions::new(
+  let options = @logfmt.LogfmtOptions::new(
     record_queue_capacity=8,
     control_queue_capacity=1,
     ack_queue_capacity=1,
@@ -801,16 +816,20 @@ async test "LogfmtRuntime concurrent flush and shutdown do not steal acknowledge
     shutdown_timeout_ms=2000,
   )
   let (flush_result, shutdown_result, stats) = @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(group, writer, options~)
+    let runtime = @logfmt.LogfmtRuntime::start_in(group, writer, options~)
     let ctx = root_ctx(runtime.dispatch())
     for _ in 0..<4 {
       ctx.event(Info, "flush-shutdown-race")
     }
     let flush_task : @async.Task[Result[Unit, _]] = group.spawn(() => {
-      result_of(() => runtime.flush())
+      Ok(runtime.flush()) catch {
+        err => Err(err)
+      }
     })
     let shutdown_task : @async.Task[Result[Unit, _]] = group.spawn(() => {
-      result_of(() => runtime.shutdown())
+      Ok(runtime.shutdown()) catch {
+        err => Err(err)
+      }
     })
     let flush_result = flush_task.wait()
     let shutdown_result = shutdown_task.wait()
@@ -831,7 +850,7 @@ async test "LogfmtRuntime concurrent flush and shutdown do not steal acknowledge
 ///|
 async test "LogfmtRuntime concurrent shutdown is idempotent" {
   let writer = MemoryWriter::new(delay_ms=20)
-  let options = LogfmtOptions::new(
+  let options = @logfmt.LogfmtOptions::new(
     record_queue_capacity=8,
     control_queue_capacity=1,
     ack_queue_capacity=1,
@@ -840,16 +859,20 @@ async test "LogfmtRuntime concurrent shutdown is idempotent" {
     shutdown_timeout_ms=2000,
   )
   let (first_result, second_result, stats) = @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(group, writer, options~)
+    let runtime = @logfmt.LogfmtRuntime::start_in(group, writer, options~)
     let ctx = root_ctx(runtime.dispatch())
     for _ in 0..<4 {
       ctx.event(Info, "shutdown-race")
     }
     let first_task : @async.Task[Result[Unit, _]] = group.spawn(() => {
-      result_of(() => runtime.shutdown())
+      Ok(runtime.shutdown()) catch {
+        err => Err(err)
+      }
     })
     let second_task : @async.Task[Result[Unit, _]] = group.spawn(() => {
-      result_of(() => runtime.shutdown())
+      Ok(runtime.shutdown()) catch {
+        err => Err(err)
+      }
     })
     let first_result = first_task.wait()
     let second_result = second_task.wait()
@@ -864,49 +887,57 @@ async test "LogfmtRuntime concurrent shutdown is idempotent" {
 ///|
 async test "LogfmtRuntime flush is bounded by command timeout" {
   let writer = MemoryWriter::new(delay_ms=100)
-  let result : Result[Result[Unit, _]?, _] = result_of(() => {
+  let result : Result[Result[Unit, _]?, _] = Ok(
     @async.with_timeout_opt(500, () => {
       @async.with_task_group(group => {
-        let runtime = LogfmtRuntime::start_in(
+        let runtime = @logfmt.LogfmtRuntime::start_in(
           group,
           writer,
-          options=LogfmtOptions::new(
+          options=@logfmt.LogfmtOptions::new(
             command_timeout_ms=10,
             shutdown_timeout_ms=200,
           ),
         )
         let ctx = root_ctx(runtime.dispatch())
         ctx.event(Info, "slow-flush")
-        let flush_result : Result[Unit, _] = result_of(() => runtime.flush())
+        let flush_result : Result[Unit, _] = Ok(runtime.flush()) catch {
+          err => Err(err)
+        }
         @async.sleep(120)
-        ignore(result_of(() => runtime.shutdown()))
+        ignore(Ok(runtime.shutdown()) catch { err => Err(err) })
         flush_result
       })
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Ok(Some(Err(@logfmt.TimedOut(_)))))
 }
 
 ///|
 async test "LogfmtRuntime shutdown is bounded by command timeout" {
   let writer = MemoryWriter::new(delay_ms=100)
-  let result : Result[Result[Unit, _]?, _] = result_of(() => {
+  let result : Result[Result[Unit, _]?, _] = Ok(
     @async.with_timeout_opt(500, () => {
       @async.with_task_group(group => {
-        let runtime = LogfmtRuntime::start_in(
+        let runtime = @logfmt.LogfmtRuntime::start_in(
           group,
           writer,
-          options=LogfmtOptions::new(
+          options=@logfmt.LogfmtOptions::new(
             command_timeout_ms=10,
             shutdown_timeout_ms=200,
           ),
         )
         let ctx = root_ctx(runtime.dispatch())
         ctx.event(Info, "slow-shutdown")
-        result_of(() => runtime.shutdown())
+        Ok(runtime.shutdown()) catch {
+          err => Err(err)
+        }
       })
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Ok(Some(Err(@logfmt.TimedOut(_)))))
 }
 
@@ -914,16 +945,23 @@ async test "LogfmtRuntime shutdown is bounded by command timeout" {
 async test "LogfmtRuntime shutdown can be retried after timing out" {
   let writer = MemoryWriter::new(delay_ms=100)
   let (first_result, second_result) = @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(
+    let runtime = @logfmt.LogfmtRuntime::start_in(
       group,
       writer,
-      options=LogfmtOptions::new(command_timeout_ms=10, shutdown_timeout_ms=200),
+      options=@logfmt.LogfmtOptions::new(
+        command_timeout_ms=10,
+        shutdown_timeout_ms=200,
+      ),
     )
     let ctx = root_ctx(runtime.dispatch())
     ctx.event(Info, "slow-shutdown-retry")
-    let first_result : Result[Unit, _] = result_of(() => runtime.shutdown())
+    let first_result : Result[Unit, _] = Ok(runtime.shutdown()) catch {
+      err => Err(err)
+    }
     @async.sleep(120)
-    let second_result : Result[Unit, _] = result_of(() => runtime.shutdown())
+    let second_result : Result[Unit, _] = Ok(runtime.shutdown()) catch {
+      err => Err(err)
+    }
     (first_result, second_result)
   })
   assert_true(first_result is Err(@logfmt.TimedOut(_)))

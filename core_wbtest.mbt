@@ -6,7 +6,7 @@ struct CaptureWb {
 
 ///|
 fn CaptureWb::new() -> CaptureWb {
-  { starts: Ref([]), events: Ref([]) }
+  { starts: Ref([]), events: Ref([]), }
 }
 
 ///|

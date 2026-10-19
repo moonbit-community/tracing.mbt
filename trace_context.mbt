@@ -77,12 +77,12 @@ fn TraceContext::ensure_trace_id(self : TraceContext) -> TraceId {
 
 ///|
 fn SpanHandle::disabled() -> SpanHandle {
-  { span: None, lanes: [], closed: Ref(true) }
+  { span: None, lanes: [], closed: Ref(true), }
 }
 
 ///|
 fn SpanHandle::enabled(span : SpanContext, lanes : Array[Lane]) -> SpanHandle {
-  { span: Some(span), lanes, closed: Ref(false) }
+  { span: Some(span), lanes, closed: Ref(false), }
 }
 
 ///|
@@ -107,7 +107,7 @@ pub fn SpanHandle::record(self : SpanHandle, fields : ArrayView[Field]) -> Bool 
   guard self.span is Some(span) else { return false }
   guard !self.closed.val else { return false }
   validate_fields(fields)
-  let record = { span, fields: fields.to_owned() }
+  let record = { span, fields: fields.to_owned(), }
   for lane in self.lanes {
     lane.subscriber.on_span_record(record)
   }
@@ -122,7 +122,7 @@ pub fn SpanHandle::record(self : SpanHandle, fields : ArrayView[Field]) -> Bool 
 pub fn SpanHandle::follows_from(self : SpanHandle, cause : SpanContext) -> Bool {
   guard self.span is Some(span) else { return false }
   guard !self.closed.val else { return false }
-  let link = { span, follows_from: cause }
+  let link = { span, follows_from: cause, }
   for lane in self.lanes {
     lane.subscriber.on_span_link(link)
   }
@@ -138,13 +138,13 @@ pub fn SpanHandle::follows_from(self : SpanHandle, cause : SpanContext) -> Bool 
 /// The function returns `true` only for the first successful close.
 pub fn SpanHandle::close(
   self : SpanHandle,
-  status? : SpanStatus = Ok,
+  status~ : SpanStatus = Ok,
   error? : String,
 ) -> Bool {
   guard self.span is Some(span) else { return false }
   guard !self.closed.val else { return false }
   self.closed.val = true
-  let record = { span, status, error }
+  let record = { span, status, error, }
   for lane in self.lanes {
     lane.subscriber.on_span_end(record)
   }
@@ -182,7 +182,7 @@ fn TraceContext::start_span(
       trace_flags=self.shared.trace_flags,
       trace_state=self.shared.trace_state,
     )
-    let start = { metadata, span, parent, fields: fields.to_owned() }
+    let start = { metadata, span, parent, fields: fields.to_owned(), }
     for lane in lanes {
       lane.subscriber.on_span_start(start)
     }
@@ -192,7 +192,7 @@ fn TraceContext::start_span(
     }
     (
       handle,
-      { shared: self.shared, current_span: Some(span), baggage: self.baggage },
+      { shared: self.shared, current_span: Some(span), baggage: self.baggage, },
     )
   }
 }
@@ -243,7 +243,7 @@ pub fn TraceContext::root_with_parent(
   dispatch : Dispatch,
   trace_ids : TraceIdAllocator,
   parent : SpanContext,
-  baggage? : Baggage = Baggage::empty(),
+  baggage~ : Baggage = Baggage::empty(),
 ) -> TraceContext {
   let root_parent = if parent.is_valid() { Some(parent) } else { None }
   {
@@ -300,7 +300,7 @@ pub fn TraceContext::event(
   name : String,
   message? : String,
   target? : String,
-  fields? : ArrayView[Field] = [],
+  fields~ : ArrayView[Field] = [],
   loc~ : SourceLoc,
 ) -> Unit {
   validate_fields(fields)
@@ -335,7 +335,7 @@ pub fn TraceContext::trace(
   name : String,
   message? : String,
   target? : String,
-  fields? : ArrayView[Field] = [],
+  fields~ : ArrayView[Field] = [],
   loc~ : SourceLoc,
 ) -> Unit {
   self.event(Trace, name, message?, target?, fields~, loc~)
@@ -349,7 +349,7 @@ pub fn TraceContext::debug(
   name : String,
   message? : String,
   target? : String,
-  fields? : ArrayView[Field] = [],
+  fields~ : ArrayView[Field] = [],
   loc~ : SourceLoc,
 ) -> Unit {
   self.event(Debug, name, message?, target?, fields~, loc~)
@@ -363,7 +363,7 @@ pub fn TraceContext::info(
   name : String,
   message? : String,
   target? : String,
-  fields? : ArrayView[Field] = [],
+  fields~ : ArrayView[Field] = [],
   loc~ : SourceLoc,
 ) -> Unit {
   self.event(Info, name, message?, target?, fields~, loc~)
@@ -377,7 +377,7 @@ pub fn TraceContext::warn(
   name : String,
   message? : String,
   target? : String,
-  fields? : ArrayView[Field] = [],
+  fields~ : ArrayView[Field] = [],
   loc~ : SourceLoc,
 ) -> Unit {
   self.event(Warn, name, message?, target?, fields~, loc~)
@@ -391,7 +391,7 @@ pub fn TraceContext::error(
   name : String,
   message? : String,
   target? : String,
-  fields? : ArrayView[Field] = [],
+  fields~ : ArrayView[Field] = [],
   loc~ : SourceLoc,
 ) -> Unit {
   self.event(Error, name, message?, target?, fields~, loc~)
@@ -408,8 +408,8 @@ pub fn TraceContext::span(
   level : Level,
   name : String,
   target? : String,
-  fields? : ArrayView[Field] = [],
-  follows_from? : ArrayView[SpanContext] = [],
+  fields~ : ArrayView[Field] = [],
+  follows_from~ : ArrayView[SpanContext] = [],
   loc~ : SourceLoc,
 ) -> (SpanHandle, TraceContext) {
   let parent = match self.current_span {
@@ -458,8 +458,8 @@ pub fn[G, X] spawn_inherit(
   group : @async.TaskGroup[G],
   ctx : TraceContext,
   f : async (TraceContext) -> X,
-  no_wait? : Bool = false,
-  allow_failure? : Bool = false,
+  no_wait~ : Bool = false,
+  allow_failure~ : Bool = false,
 ) -> @async.Task[X] {
   group.spawn(no_wait~, allow_failure~, () => f(ctx))
 }
@@ -476,11 +476,11 @@ pub fn[G, X] spawn_child_span(
   level : Level,
   name : String,
   target? : String,
-  fields? : ArrayView[Field] = [],
+  fields~ : ArrayView[Field] = [],
   loc~ : SourceLoc,
   f : async (TraceContext) -> X,
-  no_wait? : Bool = false,
-  allow_failure? : Bool = false,
+  no_wait~ : Bool = false,
+  allow_failure~ : Bool = false,
 ) -> @async.Task[X] {
   let (handle, child_ctx) = ctx.start_span(
     level,
@@ -514,11 +514,11 @@ pub fn[G, X] spawn_follower_span(
   level : Level,
   name : String,
   target? : String,
-  fields? : ArrayView[Field] = [],
+  fields~ : ArrayView[Field] = [],
   loc~ : SourceLoc,
   f : async (TraceContext) -> X,
-  no_wait? : Bool = false,
-  allow_failure? : Bool = false,
+  no_wait~ : Bool = false,
+  allow_failure~ : Bool = false,
 ) -> @async.Task[X] {
   let follows_from : Array[SpanContext] = []
   if ctx.current_span() is Some(current_span) {

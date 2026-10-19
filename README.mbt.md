@@ -36,7 +36,7 @@ struct ReadmeCapture {
 
 ///|
 fn ReadmeCapture::new() -> ReadmeCapture {
-  { starts: [], records: [], events: [], ends: [], links: [] }
+  { starts: [], records: [], events: [], ends: [], links: [], }
 }
 
 ///|
@@ -65,12 +65,12 @@ fn ReadmeCapture::start_named(
 
 ///|
 struct ReadmeSink {
-  writes : Ref[Int]
+  writes : Ref[Int32]
 }
 
 ///|
 fn ReadmeSink::new() -> ReadmeSink {
-  { writes: Ref(0) }
+  { writes: Ref(0), }
 }
 
 ///|
@@ -226,7 +226,7 @@ unique.
 ```mbt check
 ///|
 struct ReadmeUser {
-  id : Int
+  id : Int32
   name : String
 }
 
@@ -237,7 +237,7 @@ impl @tracing.IntoValue for ReadmeUser with fn into_value(self) {
 
 ///|
 test "fields accept custom values" {
-  let user = ReadmeUser::{ id: 7, name: "alice" }
+  let user = ReadmeUser::{ id: 7, name: "alice", }
   // Check the exact JSON shape first, then verify that `field(...)` uses the
   // same `IntoValue` conversion automatically.
   let payload = @tracing.Object([

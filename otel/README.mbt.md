@@ -176,7 +176,7 @@ async test "with_otel_tracer exports spans" {
     .into_tracer_provider()
   let tracer = provider.tracer("readme-otel")
 
-  with_otel_tracer(tracer, ctx => {
+  @otel.with_otel_tracer(tracer, ctx => {
     ctx.with_span(
       Info,
       "handle_request",
@@ -217,7 +217,7 @@ async test "with_global_otel_tracer uses the global provider" {
     .into_tracer_provider()
   @global.set_tracer_provider(provider)
 
-  with_global_otel_tracer("readme-global", ctx => {
+  @otel.with_global_otel_tracer("readme-global", ctx => {
     ctx.with_span(Info, "job", _job_ctx => ())
   })
 
@@ -244,7 +244,7 @@ async test "current_context exposes the active OpenTelemetry span" {
   let tracer = provider.tracer("readme-context")
 
   @async.with_task_group(group => {
-    let runtime = OtelRuntime::start_in(group, tracer)
+    let runtime = @otel.OtelRuntime::start_in(group, tracer)
     let ctx = @tracing.TraceContext::root(
       runtime.dispatch(),
       @tracing.TraceIdAllocator::new_seeded(0UL),

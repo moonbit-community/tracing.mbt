@@ -2,31 +2,36 @@
 /// Configuration for the JSON Lines formatter runtime.
 pub struct JsonOptions {
   /// Capacity of the bounded record queue used by the hot path.
-  record_queue_capacity : Int
+  record_queue_capacity : Int32
   /// Capacity of the dedicated control queue used by `flush` and `shutdown`.
-  control_queue_capacity : Int
+  control_queue_capacity : Int32
   /// Capacity of the acknowledgement queue paired with the control queue.
-  ack_queue_capacity : Int
+  ack_queue_capacity : Int32
   /// Buffer size used by the background `BufferedWriter`.
-  writer_buffer_size : Int
+  writer_buffer_size : Int32
   /// Timeout used by `JsonRuntime::flush` and `JsonRuntime::shutdown` while
   /// waiting for a writer acknowledgement.
-  command_timeout_ms : Int
+  command_timeout_ms : Int32
   /// Timeout used by `with_json_*` helpers when they attempt protected
   /// shutdown during scope exit.
-  shutdown_timeout_ms : Int
+  shutdown_timeout_ms : Int32
 }
 
 ///|
 /// Snapshot of runtime health counters.
 pub struct JsonStats {
   /// Records dropped because the runtime stopped accepting or the queue filled.
-  dropped_records : Int
+  dropped_records : Int32
   /// Writer failures observed by flush or shutdown.
-  writer_errors : Int
+  writer_errors : Int32
   /// Current count of started spans that have not been closed yet.
-  unclosed_spans : Int
+  unclosed_spans : Int32
 } derive(Debug)
+
+///|
+#deprecated
+#doc(hidden)
+pub extend JsonStats with Debug::{to_repr}
 
 ///|
 /// Errors raised by `JsonRuntime::flush` and `JsonRuntime::shutdown`.
@@ -37,11 +42,21 @@ pub suberror JsonRuntimeError {
 } derive(Debug)
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend JsonRuntimeError with Debug::{to_repr}
+
+///|
 /// Errors raised by `with_json_*` helpers when both user code and shutdown
 /// fail.
 pub suberror JsonHelperError {
   UserAndShutdownFailed(Error, JsonRuntimeError)
 } derive(Debug)
+
+///|
+#deprecated
+#doc(hidden)
+pub extend JsonHelperError with Debug::{to_repr}
 
 ///|
 priv enum ControlCommand {
@@ -68,9 +83,9 @@ priv struct JsonSubscriber {
   record_queue : @aqueue.Queue[String]
   wake_queue : @aqueue.Queue[Unit]
   accepting : Ref[Bool]
-  dropped_records : Ref[Int]
+  dropped_records : Ref[Int32]
   open_spans : Ref[Set[@tracing.SpanRef]]
-  unclosed_spans : Ref[Int]
+  unclosed_spans : Ref[Int32]
 }
 
 ///|
@@ -166,7 +181,7 @@ fn append_metadata_fields(
 
 ///|
 fn encode_span_start(record : @tracing.SpanStart) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   builder.write_string("{\"kind\":\"span_start\",\"trace_id\":")
   append_json_string(builder, record.span.trace_id.to_hex())
   builder.write_string(",\"span_id\":")
@@ -184,7 +199,7 @@ fn encode_span_start(record : @tracing.SpanStart) -> String {
 
 ///|
 fn encode_span_record(record : @tracing.SpanRecord) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   builder.write_string("{\"kind\":\"span_record\",\"trace_id\":")
   append_json_string(builder, record.span.trace_id.to_hex())
   builder.write_string(",\"span_id\":")
@@ -197,7 +212,7 @@ fn encode_span_record(record : @tracing.SpanRecord) -> String {
 
 ///|
 fn encode_event(record : @tracing.EventRecord) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   builder.write_string("{\"kind\":\"event\",\"trace_id\":")
   append_json_string(builder, record.trace_id.to_hex())
   if record.span is Some(span) {
@@ -217,7 +232,7 @@ fn encode_event(record : @tracing.EventRecord) -> String {
 
 ///|
 fn encode_span_end(record : @tracing.SpanEnd) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   builder.write_string("{\"kind\":\"span_end\",\"trace_id\":")
   append_json_string(builder, record.span.trace_id.to_hex())
   builder.write_string(",\"span_id\":")
@@ -234,7 +249,7 @@ fn encode_span_end(record : @tracing.SpanEnd) -> String {
 
 ///|
 fn encode_span_link(record : @tracing.SpanLink) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   builder.write_string("{\"kind\":\"span_link\",\"trace_id\":")
   append_json_string(builder, record.span.trace_id.to_hex())
   builder.write_string(",\"span_id\":")
@@ -300,7 +315,7 @@ impl @tracing.Subscriber for JsonSubscriber with fn on_span_link(self, record) {
 ///|
 fn remember_writer_error(
   accepting : Ref[Bool],
-  writer_errors : Ref[Int],
+  writer_errors : Ref[Int32],
   writer_error_text : Ref[String?],
   err : Error,
 ) -> Unit {
@@ -316,7 +331,7 @@ async fn drain_records(
   record_queue : @aqueue.Queue[String],
   buffered : @io.BufferedWriter[&@io.Writer],
   accepting : Ref[Bool],
-  writer_errors : Ref[Int],
+  writer_errors : Ref[Int32],
   writer_error_text : Ref[String?],
 ) -> Unit {
   for ;; {
@@ -343,7 +358,7 @@ async fn drain_records(
 async fn flush_buffered(
   buffered : @io.BufferedWriter[&@io.Writer],
   accepting : Ref[Bool],
-  writer_errors : Ref[Int],
+  writer_errors : Ref[Int32],
   writer_error_text : Ref[String?],
 ) -> String? {
   if writer_error_text.val is Some(text) {
@@ -386,10 +401,10 @@ async fn writer_loop(
   ack_queue : @aqueue.Queue[RuntimeAck],
   wake_queue : @aqueue.Queue[Unit],
   accepting : Ref[Bool],
-  writer_errors : Ref[Int],
+  writer_errors : Ref[Int32],
   writer_error_text : Ref[String?],
   open_spans : Ref[Set[@tracing.SpanRef]],
-  unclosed_spans : Ref[Int],
+  unclosed_spans : Ref[Int32],
 ) -> Unit {
   let buffered = @io.BufferedWriter::new(
     writer,
@@ -453,7 +468,7 @@ async fn writer_loop(
 }
 
 ///|
-fn shutdown_timeout_message(timeout_ms : Int) -> String {
+fn shutdown_timeout_message(timeout_ms : Int32) -> String {
   "shutdown timed out after \{timeout_ms.to_string()}ms"
 }
 
@@ -488,13 +503,13 @@ pub struct JsonRuntime {
   priv wake_queue : @aqueue.Queue[Unit]
   priv control_gate : @async.Semaphore
   priv next_command_id : Ref[Int64]
-  priv dropped_records : Ref[Int]
-  priv writer_errors : Ref[Int]
-  priv unclosed_spans : Ref[Int]
+  priv dropped_records : Ref[Int32]
+  priv writer_errors : Ref[Int32]
+  priv unclosed_spans : Ref[Int32]
   priv accepting : Ref[Bool]
   priv shutdown_state : Ref[ShutdownState]
-  priv command_timeout_ms : Int
-  priv shutdown_timeout_ms : Int
+  priv command_timeout_ms : Int32
+  priv shutdown_timeout_ms : Int32
 }
 
 ///|
@@ -510,14 +525,19 @@ pub impl Default for JsonOptions with fn default() {
 }
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend JsonOptions with Default::{default}
+
+///|
 /// Create formatter options explicitly.
 pub fn JsonOptions::new(
-  record_queue_capacity? : Int = 8192,
-  control_queue_capacity? : Int = 8,
-  ack_queue_capacity? : Int = 8,
-  writer_buffer_size? : Int = 16 * 1024,
-  command_timeout_ms? : Int = 2000,
-  shutdown_timeout_ms? : Int = 2000,
+  record_queue_capacity~ : Int32 = 8192,
+  control_queue_capacity~ : Int32 = 8,
+  ack_queue_capacity~ : Int32 = 8,
+  writer_buffer_size~ : Int32 = 16 * 1024,
+  command_timeout_ms~ : Int32 = 2000,
+  shutdown_timeout_ms~ : Int32 = 2000,
 ) -> JsonOptions {
   {
     record_queue_capacity,
@@ -607,7 +627,7 @@ async fn JsonRuntime::await_ack_bounded(
 pub fn[X] JsonRuntime::start_in(
   group : @async.TaskGroup[X],
   writer : &@io.Writer,
-  options? : JsonOptions = Default::default(),
+  options~ : JsonOptions = Default::default(),
 ) -> JsonRuntime {
   guard options.record_queue_capacity > 0 else {
     abort("JsonOptions.record_queue_capacity must be positive")

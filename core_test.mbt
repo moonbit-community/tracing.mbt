@@ -2,21 +2,12 @@
 suberror TestErr derive(Debug)
 
 ///|
-async fn[X] result_of(f : async () -> X) -> Result[X, Error] {
-  try f() catch {
-    err => Err(err)
-  } noraise {
-    value => Ok(value)
-  }
-}
-
-///|
 struct Capture {
-  starts : Ref[Array[SpanStart]]
-  records : Ref[Array[SpanRecord]]
-  events : Ref[Array[EventRecord]]
-  ends : Ref[Array[SpanEnd]]
-  links : Ref[Array[SpanLink]]
+  starts : Ref[Array[@tracing.SpanStart]]
+  records : Ref[Array[@tracing.SpanRecord]]
+  events : Ref[Array[@tracing.EventRecord]]
+  ends : Ref[Array[@tracing.SpanEnd]]
+  links : Ref[Array[@tracing.SpanLink]]
 }
 
 ///|
@@ -34,8 +25,8 @@ fn Capture::new() -> Capture {
 fn fake_source_loc(repr : String) -> SourceLoc = "%identity"
 
 ///|
-fn root_ctx(dispatch : Dispatch) -> TraceContext {
-  TraceContext::root(dispatch, TraceIdAllocator::new())
+fn root_ctx(dispatch : @tracing.Dispatch) -> @tracing.TraceContext {
+  @tracing.TraceContext::root(dispatch, @tracing.TraceIdAllocator::new())
 }
 
 ///|
@@ -80,13 +71,18 @@ test "Value JSON encoding preserves order and scalar fidelity" {
 
 ///|
 test "panic field rejects duplicate object field names" {
-  ignore(field("payload", @tracing.Object([("dup", Int(1)), ("dup", Int(2))])))
+  ignore(
+    @tracing.field(
+      "payload",
+      @tracing.Object([("dup", Int(1)), ("dup", Int(2))]),
+    ),
+  )
 }
 
 ///|
 test "root event carries trace id and derived target" {
   let capture = Capture::new()
-  let ctx = root_ctx(Dispatch::from_subscriber(capture))
+  let ctx = root_ctx(@tracing.Dispatch::from_subscriber(capture))
   ctx.event(Info, "ready", message="booting")
   @debug.assert_eq(1, capture.events.val.length())
   let event = capture.events.val[0]
@@ -98,13 +94,13 @@ test "root event carries trace id and derived target" {
 ///|
 test "level-specific event helpers preserve level and payload" {
   let capture = Capture::new()
-  let ctx = root_ctx(Dispatch::from_subscriber(capture))
+  let ctx = root_ctx(@tracing.Dispatch::from_subscriber(capture))
   ctx.trace("trace")
   ctx.debug("debug", target="debug-target")
   ctx.info("info", message="booting")
-  ctx.warn("warn", fields=[field("retry", true)])
+  ctx.warn("warn", fields=[@tracing.field("retry", true)])
   ctx.error("error", message="boom", target="error-target", fields=[
-    field("code", 500),
+    @tracing.field("code", 500),
   ])
   @debug.assert_eq(5, capture.events.val.length())
   @debug.assert_eq(@tracing.Trace, capture.events.val[0].metadata.level)
@@ -114,17 +110,20 @@ test "level-specific event helpers preserve level and payload" {
   @debug.assert_eq(@tracing.Info, capture.events.val[2].metadata.level)
   @debug.assert_eq(Some("booting"), capture.events.val[2].message)
   @debug.assert_eq(@tracing.Warn, capture.events.val[3].metadata.level)
-  @debug.assert_eq([field("retry", true)], capture.events.val[3].fields)
+  @debug.assert_eq(
+    [@tracing.field("retry", true)],
+    capture.events.val[3].fields,
+  )
   @debug.assert_eq(@tracing.Level::Error, capture.events.val[4].metadata.level)
   @debug.assert_eq(Some("boom"), capture.events.val[4].message)
   @debug.assert_eq("error-target", capture.events.val[4].metadata.target)
-  @debug.assert_eq([field("code", 500)], capture.events.val[4].fields)
+  @debug.assert_eq([@tracing.field("code", 500)], capture.events.val[4].fields)
 }
 
 ///|
 test "normalize_target falls back to unknown without package suffix" {
   let capture = Capture::new()
-  let ctx = root_ctx(Dispatch::from_subscriber(capture))
+  let ctx = root_ctx(@tracing.Dispatch::from_subscriber(capture))
   ctx.event(Info, "fallback", loc=fake_source_loc("missing-at"))
   ctx.event(
     Info,
@@ -141,7 +140,7 @@ test "normalize_target falls back to unknown without package suffix" {
 test "TargetFilter matches the derived module target" {
   let capture = Capture::new()
   let ctx = root_ctx(
-    Dispatch::from_subscriber(capture).filtered(
+    @tracing.Dispatch::from_subscriber(capture).filtered(
       TargetFilter({ "moonbit-community/tracing": Info }),
     ),
   )
@@ -159,7 +158,7 @@ test "TargetFilter matches the derived module target" {
 test "disabled span returns original context and disabled handle" {
   let capture = Capture::new()
   let ctx = root_ctx(
-    Dispatch::from_subscriber(capture).filtered(LevelFilter(Warn)),
+    @tracing.Dispatch::from_subscriber(capture).filtered(LevelFilter(Warn)),
   )
   let (handle, child_ctx) = ctx.span(Info, "filtered")
   @debug.assert_eq(None, handle.span_ref())
@@ -170,13 +169,13 @@ test "disabled span returns original context and disabled handle" {
 ///|
 test "SpanHandle records links and closes only once" {
   let capture = Capture::new()
-  let ctx = root_ctx(Dispatch::from_subscriber(capture))
+  let ctx = root_ctx(@tracing.Dispatch::from_subscriber(capture))
   let (handle, child_ctx) = ctx.span(Info, "manual")
   let cause = child_ctx.current_span().unwrap()
-  assert_true(handle.record([field("answer", 42)]))
+  assert_true(handle.record([@tracing.field("answer", 42)]))
   assert_true(handle.follows_from(cause))
   assert_true(handle.close(status=Error, error="boom"))
-  assert_true(!handle.record([field("late", true)]))
+  assert_true(!handle.record([@tracing.field("late", true)]))
   assert_true(!handle.follows_from(cause))
   assert_true(!handle.close())
   @debug.assert_eq(1, capture.records.val.length())
@@ -188,7 +187,7 @@ test "SpanHandle records links and closes only once" {
 ///|
 async test "with_span classifies cancellation and cleanup errors" {
   let cancelled = Capture::new()
-  let ctx = root_ctx(Dispatch::from_subscriber(cancelled))
+  let ctx = root_ctx(@tracing.Dispatch::from_subscriber(cancelled))
   ignore(
     @async.with_timeout_opt(10, () => {
       ctx.with_span(Info, "cancelled", _ctx => @async.sleep(100))
@@ -198,8 +197,8 @@ async test "with_span classifies cancellation and cleanup errors" {
   @debug.assert_eq(@tracing.SpanStatus::Cancelled, cancelled.ends.val[0].status)
 
   let failed = Capture::new()
-  let failed_ctx = root_ctx(Dispatch::from_subscriber(failed))
-  let result : Result[Unit?, _] = result_of(() => {
+  let failed_ctx = root_ctx(@tracing.Dispatch::from_subscriber(failed))
+  let result : Result[Unit?, _] = Ok(
     @async.with_timeout_opt(10, () => {
       failed_ctx.with_span(Info, "cleanup-error", _ctx => {
         match @async.handle_cancellation(() => @async.sleep(100)) {
@@ -207,8 +206,10 @@ async test "with_span classifies cancellation and cleanup errors" {
           Some(_) => ()
         }
       })
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Err(TestErr))
   @debug.assert_eq(1, failed.ends.val.length())
   @debug.assert_eq(@tracing.SpanStatus::Error, failed.ends.val[0].status)
@@ -218,18 +219,26 @@ async test "with_span classifies cancellation and cleanup errors" {
 ///|
 async test "spawn_inherit preserves the exact trace context" {
   let capture = Capture::new()
-  root_ctx(Dispatch::from_subscriber(capture)).with_span(Info, "parent", parent_ctx => {
-    let inherited = @async.with_task_group(group => {
-      let task : @async.Task[SpanRef?] = spawn_inherit(group, parent_ctx, inherited => {
-        inherited.event(Info, "inside-inherit")
-        inherited.current_span()
+  root_ctx(@tracing.Dispatch::from_subscriber(capture)).with_span(
+    Info,
+    "parent",
+    parent_ctx => {
+      let inherited = @async.with_task_group(group => {
+        let task : @async.Task[@tracing.SpanRef?] = @tracing.spawn_inherit(
+          group,
+          parent_ctx,
+          inherited => {
+            inherited.event(Info, "inside-inherit")
+            inherited.current_span()
+          },
+        )
+        task.wait()
       })
-      task.wait()
-    })
-    @debug.assert_eq(parent_ctx.current_span(), inherited)
-    @debug.assert_eq(1, capture.events.val.length())
-    @debug.assert_eq(parent_ctx.current_span(), capture.events.val[0].span)
-  })
+      @debug.assert_eq(parent_ctx.current_span(), inherited)
+      @debug.assert_eq(1, capture.events.val.length())
+      @debug.assert_eq(parent_ctx.current_span(), capture.events.val[0].span)
+    },
+  )
 }
 
 ///|
@@ -237,16 +246,16 @@ test "span lifecycle stays on the lanes captured at start" {
   let left = Capture::new()
   let right = Capture::new()
   let ctx = root_ctx(
-    Dispatch::fanout([
-      Dispatch::from_subscriber(left),
-      Dispatch::from_subscriber(right).filtered(
+    @tracing.Dispatch::fanout([
+      @tracing.Dispatch::from_subscriber(left),
+      @tracing.Dispatch::from_subscriber(right).filtered(
         TargetFilter({ "span-target": Info }),
       ),
     ]),
   )
   let (handle, child_ctx) = ctx.span(Info, "fixed", target="span-target")
   child_ctx.event(Info, "derived-event")
-  assert_true(handle.record([field("answer", 42)]))
+  assert_true(handle.record([@tracing.field("answer", 42)]))
   assert_true(handle.close())
   @debug.assert_eq(1, left.starts.val.length())
   @debug.assert_eq(1, right.starts.val.length())
@@ -262,14 +271,16 @@ test "span lifecycle stays on the lanes captured at start" {
 async test "fanout and async propagation preserve child and follower semantics" {
   let left = Capture::new()
   let right = Capture::new()
-  let dispatch = Dispatch::fanout([
-    Dispatch::from_subscriber(left),
-    Dispatch::from_subscriber(right).filtered(TargetFilter({ "allowed": Info })),
+  let dispatch = @tracing.Dispatch::fanout([
+    @tracing.Dispatch::from_subscriber(left),
+    @tracing.Dispatch::from_subscriber(right).filtered(
+      TargetFilter({ "allowed": Info }),
+    ),
   ])
   let ctx = root_ctx(dispatch)
   ctx.with_span(Info, "parent", parent_ctx => {
     @async.with_task_group(group => {
-      let child_task : @async.Task[SpanRef] = spawn_child_span(
+      let child_task : @async.Task[@tracing.SpanRef] = @tracing.spawn_child_span(
         group,
         parent_ctx,
         Info,
@@ -277,7 +288,7 @@ async test "fanout and async propagation preserve child and follower semantics" 
         child_ctx => child_ctx.current_span().unwrap(),
         target="allowed",
       )
-      let follower_task : @async.Task[SpanRef] = spawn_follower_span(
+      let follower_task : @async.Task[@tracing.SpanRef] = @tracing.spawn_follower_span(
         group,
         parent_ctx,
         Info,
@@ -311,9 +322,9 @@ async test "fanout and async propagation preserve child and follower semantics" 
 ///|
 async test "spawn_follower_span without current span keeps the trace and skips links" {
   let capture = Capture::new()
-  let ctx = root_ctx(Dispatch::from_subscriber(capture))
+  let ctx = root_ctx(@tracing.Dispatch::from_subscriber(capture))
   let follower = @async.with_task_group(group => {
-    let task : @async.Task[SpanRef] = spawn_follower_span(
+    let task : @async.Task[@tracing.SpanRef] = @tracing.spawn_follower_span(
       group,
       ctx,
       Info,
@@ -331,26 +342,29 @@ async test "spawn_follower_span without current span keeps the trace and skips l
 ///|
 test "filtered root span keeps span ids untouched" {
   let capture = Capture::new()
-  let ids = TraceIdAllocator::new_seeded(0UL)
-  let filtered = TraceContext::root(
-    Dispatch::from_subscriber(capture).filtered(LevelFilter(Warn)),
+  let ids = @tracing.TraceIdAllocator::new_seeded(0UL)
+  let filtered = @tracing.TraceContext::root(
+    @tracing.Dispatch::from_subscriber(capture).filtered(LevelFilter(Warn)),
     ids,
   )
   let (filtered_handle, _) = filtered.span(Info, "ignored")
   @debug.assert_eq(None, filtered_handle.span_ref())
-  let enabled = TraceContext::root(Dispatch::from_subscriber(capture), ids)
+  let enabled = @tracing.TraceContext::root(
+    @tracing.Dispatch::from_subscriber(capture),
+    ids,
+  )
   let (handle, _) = enabled.span(Info, "emitted")
   ignore(handle.close())
   @debug.assert_eq(1, capture.starts.val.length())
   @debug.assert_eq(
-    SpanId::from_hex("0000000000000001").unwrap(),
+    @tracing.SpanId::from_hex("0000000000000001").unwrap(),
     capture.starts.val[0].span.span_id,
   )
 }
 
 ///|
-fn trace_state_header_with_count(count : Int) -> String {
-  let builder = StringBuilder::new()
+fn trace_state_header_with_count(count : Int32) -> String {
+  let builder = StringBuilder()
   for index in 0..<count {
     if index > 0 {
       builder.write_char(',')
@@ -365,36 +379,39 @@ fn trace_state_header_with_count(count : Int) -> String {
 
 ///|
 test "Baggage::from_header rejects malformed UTF-8 percent encodings" {
-  assert_true(Baggage::from_header("x=%FF") is None)
-  assert_true(Baggage::from_header("x=%E2%82") is None)
+  assert_true(@tracing.Baggage::from_header("x=%FF") is None)
+  assert_true(@tracing.Baggage::from_header("x=%E2%82") is None)
 }
 
 ///|
 test "Baggage percent-encoded UTF-8 round trips" {
   let expected = @utf8.decode(b"\xE2\x82\xAC")
-  let baggage = Baggage::from_header("currency=%E2%82%AC").unwrap()
+  let baggage = @tracing.Baggage::from_header("currency=%E2%82%AC").unwrap()
   let entry = baggage.get("currency").unwrap()
   @debug.assert_eq("currency", entry.name)
   @debug.assert_eq(expected, entry.value)
-  let encoded = Baggage::empty().insert("currency", expected).unwrap().header()
+  let encoded = @tracing.Baggage::empty()
+    .insert("currency", expected)
+    .unwrap()
+    .header()
   @debug.assert_eq("currency=%E2%82%AC", encoded)
   @debug.assert_eq(
     expected,
-    Baggage::from_header(encoded).unwrap().get("currency").unwrap().value,
+    @tracing.Baggage::from_header(encoded).unwrap().get("currency").unwrap().value,
   )
 }
 
 ///|
 test "TraceState::from_header rejects duplicate oversized and invalid members" {
-  assert_true(TraceState::from_header("rojo=00,rojo=01") is None)
+  assert_true(@tracing.TraceState::from_header("rojo=00,rojo=01") is None)
   assert_true(
-    TraceState::from_header(trace_state_header_with_count(33)) is None,
+    @tracing.TraceState::from_header(trace_state_header_with_count(33)) is None,
   )
-  assert_true(TraceState::from_header("Upper=1") is None)
-  assert_true(TraceState::from_header("ok=a=b") is None)
+  assert_true(@tracing.TraceState::from_header("Upper=1") is None)
+  assert_true(@tracing.TraceState::from_header("ok=a=b") is None)
   @debug.assert_eq(
     32,
-    TraceState::from_header(trace_state_header_with_count(32))
+    @tracing.TraceState::from_header(trace_state_header_with_count(32))
     .unwrap()
     .entries()
     .length(),
@@ -403,15 +420,15 @@ test "TraceState::from_header rejects duplicate oversized and invalid members" {
 
 ///|
 test "root_with_parent exposes only valid propagated parents" {
-  let remote_parent = SpanContext::new(
-    TraceId::from_hex("00000000000000000000000000000001").unwrap(),
-    SpanId::from_hex("0000000000000002").unwrap(),
+  let remote_parent = @tracing.SpanContext::new(
+    @tracing.TraceId::from_hex("00000000000000000000000000000001").unwrap(),
+    @tracing.SpanId::from_hex("0000000000000002").unwrap(),
     is_remote=true,
   )
   let capture = Capture::new()
-  let ctx = TraceContext::root_with_parent(
-    Dispatch::from_subscriber(capture),
-    TraceIdAllocator::new_seeded(0UL),
+  let ctx = @tracing.TraceContext::root_with_parent(
+    @tracing.Dispatch::from_subscriber(capture),
+    @tracing.TraceIdAllocator::new_seeded(0UL),
     remote_parent,
   )
   @debug.assert_eq(Some(remote_parent), ctx.propagated_span())
@@ -425,10 +442,10 @@ test "root_with_parent exposes only valid propagated parents" {
   )
 
   let invalid_capture = Capture::new()
-  let invalid_ctx = TraceContext::root_with_parent(
-    Dispatch::from_subscriber(invalid_capture),
-    TraceIdAllocator::new_seeded(0UL),
-    SpanContext::invalid(),
+  let invalid_ctx = @tracing.TraceContext::root_with_parent(
+    @tracing.Dispatch::from_subscriber(invalid_capture),
+    @tracing.TraceIdAllocator::new_seeded(0UL),
+    @tracing.SpanContext::invalid(),
   )
   @debug.assert_eq(None, invalid_ctx.propagated_span())
   let (invalid_handle, _) = invalid_ctx.span(Info, "local-root")
@@ -439,5 +456,5 @@ test "root_with_parent exposes only valid propagated parents" {
 
 ///|
 test "panic TraceIdAllocator::new_seeded rejects max Int64 seed" {
-  ignore(TraceIdAllocator::new_seeded(9223372036854775807UL))
+  ignore(@tracing.TraceIdAllocator::new_seeded(9223372036854775807UL))
 }

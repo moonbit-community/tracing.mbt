@@ -5,22 +5,13 @@ suberror SinkFailed derive(Debug)
 suberror UserFailed derive(Debug)
 
 ///|
-async fn[X] result_of(f : async () -> X) -> Result[X, Error] {
-  try f() catch {
-    err => Err(err)
-  } noraise {
-    value => Ok(value)
-  }
-}
-
-///|
 struct Capture {
   starts : Ref[Array[@tracing.SpanStart]]
 }
 
 ///|
 fn Capture::new() -> Capture {
-  { starts: Ref([]) }
+  { starts: Ref([]), }
 }
 
 ///|
@@ -41,14 +32,17 @@ impl @tracing.Subscriber for Capture with fn on_span_end(_self, _record) {
 ///|
 struct MemoryWriter {
   output : Ref[StringBuilder]
-  delay_ms : Int
-  fail_after : Int?
-  writes : Ref[Int]
+  delay_ms : Int32
+  fail_after : Int32?
+  writes : Ref[Int32]
 }
 
 ///|
-fn MemoryWriter::new(delay_ms? : Int = 0, fail_after? : Int) -> MemoryWriter {
-  { output: Ref(StringBuilder::new()), delay_ms, fail_after, writes: Ref(0) }
+fn MemoryWriter::new(
+  delay_ms~ : Int32 = 0,
+  fail_after? : Int32,
+) -> MemoryWriter {
+  { output: Ref(StringBuilder()), delay_ms, fail_after, writes: Ref(0), }
 }
 
 ///|
@@ -147,7 +141,7 @@ async test "spawn_child_span preserves caller callsite across packages" {
 ///|
 async test "with_json_writer emits JSON lines" {
   let writer = MemoryWriter::new()
-  with_json_writer(writer, ctx => {
+  @jsonl.with_json_writer(writer, ctx => {
     ctx.event(Info, "ready", message="booting", fields=[
       @tracing.field("worker", 1),
     ])
@@ -271,20 +265,26 @@ async test "with_json_writer emits JSON lines" {
 ///|
 async test "with_json_writer surfaces writer failures on the success path" {
   let writer = MemoryWriter::new(fail_after=0)
-  let result : Result[Unit, _] = result_of(() => {
-    with_json_writer(writer, ctx => ctx.event(Info, "before-shutdown-failure"))
-  })
+  let result : Result[Unit, _] = Ok(
+    @jsonl.with_json_writer(writer, ctx => {
+      ctx.event(Info, "before-shutdown-failure")
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Err(@jsonl.WriterFailed(_)))
 }
 
 ///|
 async test "with_json_writer encodes error span ends precisely" {
   let writer = MemoryWriter::new()
-  let result : Result[Unit, _] = result_of(() => {
-    with_json_writer(writer, ctx => {
+  let result : Result[Unit, _] = Ok(
+    @jsonl.with_json_writer(writer, ctx => {
       ctx.with_span(Info, "error-span", _ctx => raise UserFailed)
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Err(UserFailed))
   let lines = writer.json_lines()
   @debug.assert_eq(2, lines.length())
@@ -323,7 +323,7 @@ async test "with_json_writer encodes error span ends precisely" {
 ///|
 async test "with_json_writer encodes cancelled span ends precisely" {
   let writer = MemoryWriter::new()
-  with_json_writer(writer, ctx => {
+  @jsonl.with_json_writer(writer, ctx => {
     ignore(
       @async.with_timeout_opt(10, () => {
         ctx.with_span(Info, "cancelled-span", _ctx => @async.sleep(100))
@@ -366,7 +366,7 @@ async test "with_json_writer maps non-finite doubles to null" {
   let pos_inf = 1.0 / 0.0
   let neg_inf = -1.0 / 0.0
   let writer = MemoryWriter::new()
-  with_json_writer(writer, ctx => {
+  @jsonl.with_json_writer(writer, ctx => {
     ctx.event(Info, "non-finite", fields=[
       @tracing.field("nan", @tracing.Double(nan)),
       @tracing.field("pos_inf", @tracing.Double(pos_inf)),
@@ -404,7 +404,7 @@ async test "with_json_writer maps non-finite doubles to null" {
 ///|
 async test "with_json_writer encodes follows-from links precisely" {
   let writer = MemoryWriter::new()
-  with_json_writer(writer, ctx => {
+  @jsonl.with_json_writer(writer, ctx => {
     ctx.with_span(Info, "parent", parent_ctx => {
       @async.with_task_group(group => {
         let task : @async.Task[Unit] = @tracing.spawn_follower_span(
@@ -481,12 +481,14 @@ async test "with_json_writer encodes follows-from links precisely" {
 ///|
 async test "with_json_writer flushes accepted records on exception path" {
   let writer = MemoryWriter::new()
-  let result : Result[Unit, _] = result_of(() => {
-    with_json_writer(writer, ctx => {
+  let result : Result[Unit, _] = Ok(
+    @jsonl.with_json_writer(writer, ctx => {
       ctx.event(Info, "before-fail")
       raise UserFailed
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Err(UserFailed))
   let lines = writer.json_lines()
   @debug.assert_eq(1, lines.length())
@@ -510,12 +512,14 @@ async test "with_json_writer flushes accepted records on exception path" {
 ///|
 async test "with_json_writer combines user and shutdown failures" {
   let writer = MemoryWriter::new(fail_after=0)
-  let result : Result[Unit, _] = result_of(() => {
-    with_json_writer(writer, ctx => {
+  let result : Result[Unit, _] = Ok(
+    @jsonl.with_json_writer(writer, ctx => {
       ctx.event(Info, "before-double-fail")
       raise UserFailed
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
 
   match result {
     Err(@jsonl.UserAndShutdownFailed(user_err, WriterFailed(text))) => {
@@ -530,7 +534,7 @@ async test "with_json_writer combines user and shutdown failures" {
 async test "with_json_writer handles enclosing cancellation without hanging" {
   let writer = MemoryWriter::new()
   let result : Unit? = @async.with_timeout_opt(10, () => {
-    with_json_writer(writer, ctx => {
+    @jsonl.with_json_writer(writer, ctx => {
       ctx.event(Info, "before-cancel")
       @async.sleep(100)
     })
@@ -541,18 +545,23 @@ async test "with_json_writer handles enclosing cancellation without hanging" {
 ///|
 async test "with_json_writer shutdown attempt stays within the configured timeout" {
   let writer = MemoryWriter::new(delay_ms=50)
-  let result : Result[Unit?, _] = result_of(() => {
+  let result : Result[Unit?, _] = Ok(
     @async.with_timeout_opt(100, () => {
-      with_json_writer(
+      @jsonl.with_json_writer(
         writer,
-        options=JsonOptions::new(command_timeout_ms=5, shutdown_timeout_ms=5),
+        options=@jsonl.JsonOptions::new(
+          command_timeout_ms=5,
+          shutdown_timeout_ms=5,
+        ),
         ctx => {
           ctx.event(Info, "slow")
           raise UserFailed
         },
       )
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Err(@jsonl.UserAndShutdownFailed(UserFailed, _)))
 }
 
@@ -560,10 +569,10 @@ async test "with_json_writer shutdown attempt stays within the configured timeou
 async test "JsonRuntime counts dropped records when queue is full" {
   let writer = MemoryWriter::new(delay_ms=50)
   let runtime = @async.with_task_group(group => {
-    let runtime = JsonRuntime::start_in(
+    let runtime = @jsonl.JsonRuntime::start_in(
       group,
       writer,
-      options=JsonOptions::new(
+      options=@jsonl.JsonOptions::new(
         record_queue_capacity=1,
         control_queue_capacity=2,
         ack_queue_capacity=2,
@@ -586,10 +595,10 @@ async test "JsonRuntime counts dropped records when queue is full" {
 async test "JsonRuntime flush still works when the record queue is saturated" {
   let writer = MemoryWriter::new(delay_ms=10)
   let runtime = @async.with_task_group(group => {
-    let runtime = JsonRuntime::start_in(
+    let runtime = @jsonl.JsonRuntime::start_in(
       group,
       writer,
-      options=JsonOptions::new(
+      options=@jsonl.JsonOptions::new(
         record_queue_capacity=1,
         control_queue_capacity=1,
         ack_queue_capacity=1,
@@ -632,7 +641,7 @@ async test "JsonRuntime flush still works when the record queue is saturated" {
 async test "JsonRuntime reports unclosed spans on shutdown" {
   let writer = MemoryWriter::new()
   let runtime = @async.with_task_group(group => {
-    let runtime = JsonRuntime::start_in(group, writer)
+    let runtime = @jsonl.JsonRuntime::start_in(group, writer)
     let ctx = root_ctx(runtime.dispatch())
     ignore(ctx.span(Info, "leaked"))
     runtime.shutdown()
@@ -645,7 +654,7 @@ async test "JsonRuntime reports unclosed spans on shutdown" {
 async test "JsonRuntime stats tracks unclosed spans before shutdown" {
   let writer = MemoryWriter::new()
   let stats = @async.with_task_group(group => {
-    let runtime = JsonRuntime::start_in(group, writer)
+    let runtime = @jsonl.JsonRuntime::start_in(group, writer)
     let ctx = root_ctx(runtime.dispatch())
     let (handle, _) = ctx.span(Info, "live")
     let started = runtime.stats().unclosed_spans
@@ -660,17 +669,19 @@ async test "JsonRuntime stats tracks unclosed spans before shutdown" {
 ///|
 async test "JsonRuntime reports writer failures through flush" {
   let writer = MemoryWriter::new(fail_after=0)
-  let result : Result[JsonStats, _] = result_of(() => {
+  let result : Result[@jsonl.JsonStats, _] = Ok(
     @async.with_task_group(group => {
-      let runtime = JsonRuntime::start_in(group, writer)
+      let runtime = @jsonl.JsonRuntime::start_in(group, writer)
       let ctx = root_ctx(runtime.dispatch())
       ctx.event(Info, "first")
       ctx.event(Info, "second")
       runtime.flush()
       runtime.shutdown()
       runtime.stats()
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Err(@jsonl.WriterFailed(_)))
 }
 
@@ -678,12 +689,12 @@ async test "JsonRuntime reports writer failures through flush" {
 async test "JsonRuntime drops new records after a writer failure" {
   let writer = MemoryWriter::new(fail_after=0)
   let runtime = @async.with_task_group(group => {
-    let runtime = JsonRuntime::start_in(group, writer)
+    let runtime = @jsonl.JsonRuntime::start_in(group, writer)
     let ctx = root_ctx(runtime.dispatch())
     ctx.event(Info, "first")
-    ignore(result_of(() => runtime.flush()))
+    ignore(Ok(runtime.flush()) catch { err => Err(err) })
     ctx.event(Info, "after-writer-failure")
-    ignore(result_of(() => runtime.shutdown()))
+    ignore(Ok(runtime.shutdown()) catch { err => Err(err) })
     runtime
   })
   @debug.assert_eq(1, runtime.stats().writer_errors)
@@ -693,7 +704,7 @@ async test "JsonRuntime drops new records after a writer failure" {
 ///|
 async test "JsonRuntime concurrent flush calls do not steal acknowledgements" {
   let writer = MemoryWriter::new(delay_ms=20)
-  let options = JsonOptions::new(
+  let options = @jsonl.JsonOptions::new(
     record_queue_capacity=8,
     control_queue_capacity=1,
     ack_queue_capacity=1,
@@ -702,20 +713,24 @@ async test "JsonRuntime concurrent flush calls do not steal acknowledgements" {
     shutdown_timeout_ms=2000,
   )
   let (first_result, second_result, stats) = @async.with_task_group(group => {
-    let runtime = JsonRuntime::start_in(group, writer, options~)
+    let runtime = @jsonl.JsonRuntime::start_in(group, writer, options~)
     let ctx = root_ctx(runtime.dispatch())
     for _ in 0..<4 {
       ctx.event(Info, "flush-race")
     }
     let first_task : @async.Task[Result[Unit, _]] = group.spawn(() => {
-      result_of(() => runtime.flush())
+      Ok(runtime.flush()) catch {
+        err => Err(err)
+      }
     })
     let second_task : @async.Task[Result[Unit, _]] = group.spawn(() => {
-      result_of(() => runtime.flush())
+      Ok(runtime.flush()) catch {
+        err => Err(err)
+      }
     })
     let first_result = first_task.wait()
     let second_result = second_task.wait()
-    ignore(result_of(() => runtime.shutdown()))
+    ignore(Ok(runtime.shutdown()) catch { err => Err(err) })
     (first_result, second_result, runtime.stats())
   })
   assert_true(first_result is Ok(_))
@@ -727,7 +742,7 @@ async test "JsonRuntime concurrent flush calls do not steal acknowledgements" {
 ///|
 async test "JsonRuntime concurrent flush and shutdown do not steal acknowledgements" {
   let writer = MemoryWriter::new(delay_ms=20)
-  let options = JsonOptions::new(
+  let options = @jsonl.JsonOptions::new(
     record_queue_capacity=8,
     control_queue_capacity=1,
     ack_queue_capacity=1,
@@ -736,16 +751,20 @@ async test "JsonRuntime concurrent flush and shutdown do not steal acknowledgeme
     shutdown_timeout_ms=2000,
   )
   let (flush_result, shutdown_result, stats) = @async.with_task_group(group => {
-    let runtime = JsonRuntime::start_in(group, writer, options~)
+    let runtime = @jsonl.JsonRuntime::start_in(group, writer, options~)
     let ctx = root_ctx(runtime.dispatch())
     for _ in 0..<4 {
       ctx.event(Info, "flush-shutdown-race")
     }
     let flush_task : @async.Task[Result[Unit, _]] = group.spawn(() => {
-      result_of(() => runtime.flush())
+      Ok(runtime.flush()) catch {
+        err => Err(err)
+      }
     })
     let shutdown_task : @async.Task[Result[Unit, _]] = group.spawn(() => {
-      result_of(() => runtime.shutdown())
+      Ok(runtime.shutdown()) catch {
+        err => Err(err)
+      }
     })
     let flush_result = flush_task.wait()
     let shutdown_result = shutdown_task.wait()
@@ -766,7 +785,7 @@ async test "JsonRuntime concurrent flush and shutdown do not steal acknowledgeme
 ///|
 async test "JsonRuntime concurrent shutdown is idempotent" {
   let writer = MemoryWriter::new(delay_ms=20)
-  let options = JsonOptions::new(
+  let options = @jsonl.JsonOptions::new(
     record_queue_capacity=8,
     control_queue_capacity=1,
     ack_queue_capacity=1,
@@ -775,16 +794,20 @@ async test "JsonRuntime concurrent shutdown is idempotent" {
     shutdown_timeout_ms=2000,
   )
   let (first_result, second_result, stats) = @async.with_task_group(group => {
-    let runtime = JsonRuntime::start_in(group, writer, options~)
+    let runtime = @jsonl.JsonRuntime::start_in(group, writer, options~)
     let ctx = root_ctx(runtime.dispatch())
     for _ in 0..<4 {
       ctx.event(Info, "shutdown-race")
     }
     let first_task : @async.Task[Result[Unit, _]] = group.spawn(() => {
-      result_of(() => runtime.shutdown())
+      Ok(runtime.shutdown()) catch {
+        err => Err(err)
+      }
     })
     let second_task : @async.Task[Result[Unit, _]] = group.spawn(() => {
-      result_of(() => runtime.shutdown())
+      Ok(runtime.shutdown()) catch {
+        err => Err(err)
+      }
     })
     let first_result = first_task.wait()
     let second_result = second_task.wait()
@@ -799,49 +822,57 @@ async test "JsonRuntime concurrent shutdown is idempotent" {
 ///|
 async test "JsonRuntime flush is bounded by command timeout" {
   let writer = MemoryWriter::new(delay_ms=100)
-  let result : Result[Result[Unit, _]?, _] = result_of(() => {
+  let result : Result[Result[Unit, _]?, _] = Ok(
     @async.with_timeout_opt(500, () => {
       @async.with_task_group(group => {
-        let runtime = JsonRuntime::start_in(
+        let runtime = @jsonl.JsonRuntime::start_in(
           group,
           writer,
-          options=JsonOptions::new(
+          options=@jsonl.JsonOptions::new(
             command_timeout_ms=10,
             shutdown_timeout_ms=200,
           ),
         )
         let ctx = root_ctx(runtime.dispatch())
         ctx.event(Info, "slow-flush")
-        let flush_result : Result[Unit, _] = result_of(() => runtime.flush())
+        let flush_result : Result[Unit, _] = Ok(runtime.flush()) catch {
+          err => Err(err)
+        }
         @async.sleep(120)
-        ignore(result_of(() => runtime.shutdown()))
+        ignore(Ok(runtime.shutdown()) catch { err => Err(err) })
         flush_result
       })
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Ok(Some(Err(@jsonl.TimedOut(_)))))
 }
 
 ///|
 async test "JsonRuntime shutdown is bounded by command timeout" {
   let writer = MemoryWriter::new(delay_ms=100)
-  let result : Result[Result[Unit, _]?, _] = result_of(() => {
+  let result : Result[Result[Unit, _]?, _] = Ok(
     @async.with_timeout_opt(500, () => {
       @async.with_task_group(group => {
-        let runtime = JsonRuntime::start_in(
+        let runtime = @jsonl.JsonRuntime::start_in(
           group,
           writer,
-          options=JsonOptions::new(
+          options=@jsonl.JsonOptions::new(
             command_timeout_ms=10,
             shutdown_timeout_ms=200,
           ),
         )
         let ctx = root_ctx(runtime.dispatch())
         ctx.event(Info, "slow-shutdown")
-        result_of(() => runtime.shutdown())
+        Ok(runtime.shutdown()) catch {
+          err => Err(err)
+        }
       })
-    })
-  })
+    }),
+  ) catch {
+    err => Err(err)
+  }
   assert_true(result is Ok(Some(Err(@jsonl.TimedOut(_)))))
 }
 
@@ -849,16 +880,23 @@ async test "JsonRuntime shutdown is bounded by command timeout" {
 async test "JsonRuntime shutdown can be retried after timing out" {
   let writer = MemoryWriter::new(delay_ms=100)
   let (first_result, second_result) = @async.with_task_group(group => {
-    let runtime = JsonRuntime::start_in(
+    let runtime = @jsonl.JsonRuntime::start_in(
       group,
       writer,
-      options=JsonOptions::new(command_timeout_ms=10, shutdown_timeout_ms=200),
+      options=@jsonl.JsonOptions::new(
+        command_timeout_ms=10,
+        shutdown_timeout_ms=200,
+      ),
     )
     let ctx = root_ctx(runtime.dispatch())
     ctx.event(Info, "slow-shutdown-retry")
-    let first_result : Result[Unit, _] = result_of(() => runtime.shutdown())
+    let first_result : Result[Unit, _] = Ok(runtime.shutdown()) catch {
+      err => Err(err)
+    }
     @async.sleep(120)
-    let second_result : Result[Unit, _] = result_of(() => runtime.shutdown())
+    let second_result : Result[Unit, _] = Ok(runtime.shutdown()) catch {
+      err => Err(err)
+    }
     (first_result, second_result)
   })
   assert_true(first_result is Err(@jsonl.TimedOut(_)))

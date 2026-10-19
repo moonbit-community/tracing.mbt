@@ -177,10 +177,10 @@ pub struct TraceFlags {
   // private fields
 } derive(Compare, Eq, Hash, @debug.Debug)
 pub fn TraceFlags::is_sampled(Self) -> Bool
-pub fn TraceFlags::new(UInt) -> Self
+pub fn TraceFlags::new(UInt32) -> Self
 pub fn TraceFlags::not_sampled() -> Self
 pub fn TraceFlags::sampled() -> Self
-pub fn TraceFlags::to_uint(Self) -> UInt
+pub fn TraceFlags::to_uint(Self) -> UInt32
 
 pub struct TraceId {
   // private fields
@@ -214,9 +214,9 @@ pub impl Default for TraceState
 pub(all) enum Value {
   Null
   Bool(Bool)
-  Int(Int)
+  Int(Int32)
   Int64(Int64)
-  UInt(UInt)
+  UInt(UInt32)
   UInt64(UInt64)
   Double(Double)
   String(String)
@@ -235,9 +235,9 @@ pub(open) trait IntoValue {
   fn into_value(Self) -> Value
 }
 pub impl IntoValue for Bool
-pub impl IntoValue for Int
+pub impl IntoValue for Int32
 pub impl IntoValue for Int64
-pub impl IntoValue for UInt
+pub impl IntoValue for UInt32
 pub impl IntoValue for UInt64
 pub impl IntoValue for Double
 pub impl IntoValue for String

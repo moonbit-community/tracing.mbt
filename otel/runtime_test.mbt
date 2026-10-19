@@ -20,7 +20,7 @@ fn root_ctx(dispatch : @tracing.Dispatch) -> @tracing.TraceContext {
 }
 
 ///|
-fn test_span_context(index : Int) -> @common.SpanContext {
+fn test_span_context(index : Int32) -> @common.SpanContext {
   let trace_id = @common.TraceId::from_hex("4bf92f3577b34da6a3ce929d0e0e4736").unwrap()
   let span_id = @common.SpanId::from_hex(
     index.to_string(radix=16).pad_start(16, '0'),
@@ -29,7 +29,7 @@ fn test_span_context(index : Int) -> @common.SpanContext {
 }
 
 ///|
-fn slow_end_tracer(delay_ms : Int) -> @trace.Tracer {
+fn slow_end_tracer(delay_ms : Int32) -> @trace.Tracer {
   let next_span = Ref(1)
   @trace.Tracer::from_functions((_, parent_context) => {
     let span_context = test_span_context(next_span.val)
@@ -118,10 +118,10 @@ fn attr_int64(attributes : ArrayView[@common.KeyValue], key : String) -> Int64? 
 async test "OtelRuntime exports span lifecycle records to OpenTelemetry" {
   let (exporter, tracer) = test_tracer()
   @async.with_task_group(group => {
-    let runtime = OtelRuntime::start_in(
+    let runtime = @otel.OtelRuntime::start_in(
       group,
       tracer,
-      options=OtelOptions::new(with_level=true, with_location=true),
+      options=@otel.OtelOptions::new(with_level=true, with_location=true),
     )
     let ctx = root_ctx(runtime.dispatch())
     let (parent_handle, parent_ctx) = ctx.span(
@@ -208,7 +208,7 @@ async test "with_otel_tracer exports cancelled spans before returning" {
 async test "OtelRuntime links follows-from and exposes current OpenTelemetry context" {
   let (exporter, tracer) = test_tracer()
   let runtime = @async.with_task_group(group => {
-    let runtime = OtelRuntime::start_in(group, tracer)
+    let runtime = @otel.OtelRuntime::start_in(group, tracer)
     let ctx = root_ctx(runtime.dispatch())
     let (parent_handle, parent_ctx) = ctx.span(Info, "parent")
     let current = runtime.current_context(parent_ctx)
@@ -242,7 +242,7 @@ async test "OtelRuntime links follows-from and exposes current OpenTelemetry con
 async test "OtelRuntime reports unclosed spans on shutdown" {
   let (_, tracer) = test_tracer()
   let runtime = @async.with_task_group(group => {
-    let runtime = OtelRuntime::start_in(group, tracer)
+    let runtime = @otel.OtelRuntime::start_in(group, tracer)
     let ctx = root_ctx(runtime.dispatch())
     ignore(ctx.span(Info, "leaked"))
     runtime.shutdown()
@@ -254,10 +254,10 @@ async test "OtelRuntime reports unclosed spans on shutdown" {
 ///|
 async test "OtelRuntime counts dropped span ends when the queue is full" {
   let runtime = @async.with_task_group(group => {
-    let runtime = OtelRuntime::start_in(
+    let runtime = @otel.OtelRuntime::start_in(
       group,
       slow_end_tracer(25),
-      options=OtelOptions::new(
+      options=@otel.OtelOptions::new(
         queue_capacity=1,
         control_queue_capacity=2,
         ack_queue_capacity=2,
@@ -296,7 +296,7 @@ test "conversion helpers preserve propagated span context and baggage" {
   let otel_context = @context.Context::empty()
     .with_remote_span_context(otel_parent)
     .with_baggage(otel_baggage)
-  let ctx = trace_context_from_otel(
+  let ctx = @otel.trace_context_from_otel(
     @tracing.Dispatch::noop(),
     @tracing.TraceIdAllocator::new_seeded(0UL),
     otel_context,
@@ -310,12 +310,14 @@ test "conversion helpers preserve propagated span context and baggage" {
   @debug.assert_eq(entry.value, "acme")
   @debug.assert_eq(entry.metadata, Some("meta"))
 
-  let roundtrip = span_context_from_otel(span_context_to_otel(parent)).unwrap()
+  let roundtrip = @otel.span_context_from_otel(
+    @otel.span_context_to_otel(parent),
+  ).unwrap()
   @debug.assert_eq(roundtrip, parent)
-  let otel_roundtrip = baggage_to_otel(ctx.baggage())
+  let otel_roundtrip = @otel.baggage_to_otel(ctx.baggage())
   @debug.assert_eq(otel_roundtrip.get("tenant"), Some("acme"))
   @debug.assert_eq(
-    baggage_from_otel(otel_roundtrip).get("tenant").unwrap().metadata,
+    @otel.baggage_from_otel(otel_roundtrip).get("tenant").unwrap().metadata,
     Some("meta"),
   )
 }

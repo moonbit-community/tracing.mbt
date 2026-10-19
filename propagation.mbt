@@ -122,12 +122,12 @@ fn valid_baggage_metadata(metadata : StringView) -> Bool {
 }
 
 ///|
-fn hex_digit(value : Int) -> Byte {
+fn hex_digit(value : Int32) -> Byte {
   "0123456789ABCDEF".code_unit_at(value).to_byte()
 }
 
 ///|
-fn decode_hex_digit(ch : Char) -> Int? {
+fn decode_hex_digit(ch : Char) -> Int32? {
   if ch.is_ascii_digit() {
     Some(ch.to_int() - '0'.to_int())
   } else if ch.is_ascii_lowercase() && ch <= 'f' {
@@ -195,9 +195,34 @@ pub struct TraceState {
 } derive(Eq, Compare, Hash, Debug)
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend TraceState with Eq::{not_equal, equal}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend TraceState with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend TraceState with Hash::{hash, hash_combine}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend TraceState with Debug::{to_repr}
+
+///|
 pub impl Default for TraceState with fn default() {
-  { entries: [] }
+  { entries: [], }
 }
+
+///|
+#deprecated
+#doc(hidden)
+pub extend TraceState with Default::{default}
 
 ///|
 pub fn TraceState::empty() -> TraceState {
@@ -227,7 +252,7 @@ pub fn TraceState::get(self : TraceState, key : StringView) -> String? {
 
 ///|
 pub fn TraceState::header(self : TraceState) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   for index = 0; index < self.entries.length(); index = index + 1 {
     if index > 0 {
       builder.write_char(',')
@@ -302,8 +327,28 @@ pub struct BaggageEntry {
 } derive(Eq, Compare, Hash, Debug)
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend BaggageEntry with Eq::{not_equal, equal}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend BaggageEntry with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend BaggageEntry with Hash::{hash, hash_combine}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend BaggageEntry with Debug::{to_repr}
+
+///|
 fn BaggageEntry::header(self : BaggageEntry) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   builder.write_string(self.name)
   builder.write_char('=')
   builder.write_string(percent_encode(self.value))
@@ -323,9 +368,34 @@ pub struct Baggage {
 } derive(Eq, Compare, Hash, Debug)
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend Baggage with Eq::{not_equal, equal}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend Baggage with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend Baggage with Hash::{hash, hash_combine}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend Baggage with Debug::{to_repr}
+
+///|
 pub impl Default for Baggage with fn default() {
-  { entries: [] }
+  { entries: [], }
 }
+
+///|
+#deprecated
+#doc(hidden)
+pub extend Baggage with Default::{default}
 
 ///|
 pub fn Baggage::empty() -> Baggage {
@@ -354,7 +424,7 @@ pub fn Baggage::get(self : Baggage, name : StringView) -> BaggageEntry? {
 
 ///|
 pub fn Baggage::header(self : Baggage) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   for index = 0; index < self.entries.length(); index = index + 1 {
     if index > 0 {
       builder.write_char(',')
@@ -399,7 +469,7 @@ pub fn Baggage::from_header(header : StringView) -> Baggage? {
     guard metadata is None || valid_baggage_metadata(metadata.unwrap()) else {
       return None
     }
-    entries.push({ name: name.to_owned(), value, metadata })
+    entries.push({ name: name.to_owned(), value, metadata, })
     seen[name.to_owned()] = true
   }
   baggage_with_entries(entries)
@@ -416,7 +486,7 @@ pub fn Baggage::insert(
   guard metadata is None || valid_baggage_metadata(metadata.unwrap()) else {
     return None
   }
-  let entries : Array[BaggageEntry] = [{ name, value, metadata }]
+  let entries : Array[BaggageEntry] = [{ name, value, metadata, }]
   for entry in self.entries {
     if entry.name != name {
       entries.push(entry)
@@ -454,6 +524,26 @@ pub struct SpanContext {
 } derive(Eq, Compare, Hash, Debug)
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend SpanContext with Eq::{not_equal, equal}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend SpanContext with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend SpanContext with Hash::{hash, hash_combine}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend SpanContext with Debug::{to_repr}
+
+///|
 pub fn SpanContext::invalid() -> SpanContext {
   {
     trace_id: TraceId::invalid(),
@@ -468,11 +558,11 @@ pub fn SpanContext::invalid() -> SpanContext {
 pub fn SpanContext::new(
   trace_id : TraceId,
   span_id : SpanId,
-  trace_flags? : TraceFlags = TraceFlags::sampled(),
-  trace_state? : TraceState = TraceState::empty(),
-  is_remote? : Bool = false,
+  trace_flags~ : TraceFlags = TraceFlags::sampled(),
+  trace_state~ : TraceState = TraceState::empty(),
+  is_remote~ : Bool = false,
 ) -> SpanContext {
-  { trace_id, span_id, trace_flags, trace_state, is_remote }
+  { trace_id, span_id, trace_flags, trace_state, is_remote, }
 }
 
 ///|

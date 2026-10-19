@@ -28,14 +28,14 @@ pub suberror JsonRuntimeError {
 
 // Types and methods
 pub struct JsonOptions {
-  record_queue_capacity : Int
-  control_queue_capacity : Int
-  ack_queue_capacity : Int
-  writer_buffer_size : Int
-  command_timeout_ms : Int
-  shutdown_timeout_ms : Int
+  record_queue_capacity : Int32
+  control_queue_capacity : Int32
+  ack_queue_capacity : Int32
+  writer_buffer_size : Int32
+  command_timeout_ms : Int32
+  shutdown_timeout_ms : Int32
 }
-pub fn JsonOptions::new(record_queue_capacity? : Int, control_queue_capacity? : Int, ack_queue_capacity? : Int, writer_buffer_size? : Int, command_timeout_ms? : Int, shutdown_timeout_ms? : Int) -> Self
+pub fn JsonOptions::new(record_queue_capacity? : Int32, control_queue_capacity? : Int32, ack_queue_capacity? : Int32, writer_buffer_size? : Int32, command_timeout_ms? : Int32, shutdown_timeout_ms? : Int32) -> Self
 pub impl Default for JsonOptions
 
 pub struct JsonRuntime {
@@ -48,9 +48,9 @@ pub fn[X] JsonRuntime::start_in(@async.TaskGroup[X], &@io.Writer, options? : Jso
 pub fn JsonRuntime::stats(Self) -> JsonStats
 
 pub struct JsonStats {
-  dropped_records : Int
-  writer_errors : Int
-  unclosed_spans : Int
+  dropped_records : Int32
+  writer_errors : Int32
+  unclosed_spans : Int32
 } derive(@debug.Debug)
 
 // Type aliases

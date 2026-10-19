@@ -13,6 +13,26 @@ pub(all) enum Level {
 } derive(Eq, Compare, Hash, Debug)
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend Level with Eq::{not_equal, equal}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend Level with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend Level with Hash::{hash, hash_combine}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend Level with Debug::{to_repr}
+
+///|
 /// Structured field values carried by spans and events.
 ///
 /// `Object` preserves insertion order. This is
@@ -23,9 +43,9 @@ pub(all) enum Level {
 pub(all) enum Value {
   Null
   Bool(Bool)
-  Int(Int)
+  Int(Int32)
   Int64(Int64)
-  UInt(UInt)
+  UInt(UInt32)
   UInt64(UInt64)
   Double(Double)
   String(String)
@@ -33,6 +53,16 @@ pub(all) enum Value {
   Array(Array[Value])
   Object(Array[(String, Value)])
 } derive(Eq, Hash)
+
+///|
+#deprecated
+#doc(hidden)
+pub extend Value with Eq::{not_equal, equal}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend Value with Hash::{hash, hash_combine}
 
 ///|
 /// Conversion trait used by `field` and other convenience APIs.
@@ -48,11 +78,26 @@ pub struct Field {
 } derive(Eq, Hash, Debug)
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend Field with Eq::{not_equal, equal}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend Field with Hash::{hash, hash_combine}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend Field with Debug::{to_repr}
+
+///|
 /// Create a structured field by converting `value` into a tracing `Value`.
 pub fn[T : IntoValue] field(name : String, value : T) -> Field {
   let value = value.into_value()
   value.assert_unique_object_fields("$")
-  { name, value }
+  { name, value, }
 }
 
 ///|
@@ -98,7 +143,7 @@ fn Level::allows(self : Level, level : Level) -> Bool {
 }
 
 ///|
-fn append_hex4(builder : StringBuilder, value : Int) -> Unit {
+fn append_hex4(builder : StringBuilder, value : Int32) -> Unit {
   let digits = "0123456789abcdef"
   builder.write_char(digits[(value >> 12) & 0xF].to_int().unsafe_to_char())
   builder.write_char(digits[(value >> 8) & 0xF].to_int().unsafe_to_char())
@@ -180,7 +225,7 @@ fn Value::append_json(self : Value, builder : StringBuilder) -> Unit {
 /// `Json` AST.
 pub fn Value::to_json_string(self : Value) -> String {
   self.assert_unique_object_fields("$")
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   self.append_json(builder)
   builder.to_string()
 }
@@ -215,9 +260,19 @@ pub impl Debug for Value with fn to_repr(self) {
 }
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend Value with Debug::{to_repr}
+
+///|
 pub impl IntoValue for Value with fn into_value(self) {
   self
 }
+
+///|
+#deprecated
+#doc(hidden)
+pub extend Value with IntoValue::{into_value}
 
 ///|
 pub impl IntoValue for Bool with fn into_value(self) {
@@ -225,7 +280,7 @@ pub impl IntoValue for Bool with fn into_value(self) {
 }
 
 ///|
-pub impl IntoValue for Int with fn into_value(self) {
+pub impl IntoValue for Int32 with fn into_value(self) {
   Int(self)
 }
 
@@ -235,7 +290,7 @@ pub impl IntoValue for Int64 with fn into_value(self) {
 }
 
 ///|
-pub impl IntoValue for UInt with fn into_value(self) {
+pub impl IntoValue for UInt32 with fn into_value(self) {
   UInt(self)
 }
 
