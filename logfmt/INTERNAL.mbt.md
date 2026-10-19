@@ -134,7 +134,7 @@ Ordinary record handling writes a line and newline only while `writer_error_text
 - If the user callback succeeds and shutdown fails, the shutdown error is raised.
 - If the user callback fails and shutdown succeeds, the original error is raised.
 - If both the user callback and shutdown fail with a `LogfmtRuntimeError`, `UserAndShutdownFailed` is raised.
-- If the user callback is cancelled, the helper performs best-effort protected shutdown and re-raises cancellation.
+- If the user callback is cancelled, deferred cleanup performs best-effort protected shutdown before cancellation propagates.
 
 Protected shutdown uses `@async.protect_from_cancel` and `shutdown_timeout_ms`, preventing outer cancellation from interrupting cleanup directly.
 

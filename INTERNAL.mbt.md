@@ -78,7 +78,7 @@ The trace id is allocated lazily. `TraceContext::root` does not consume the allo
 `with_span` wraps an async callback and closes the span automatically:
 
 - On normal return, it closes with `Ok`.
-- On a MoonBit async cancellation error, it closes with `Cancelled` and re-raises the original error.
+- On cancellation, deferred cleanup closes it with `Cancelled` and lets cancellation propagate.
 - On any other error, it closes with `Error`, stores `err.to_string()` in the end record's error field, and re-raises the original error.
 - If the callsite is filtered out, the callback runs with the original context and no span records are emitted.
 
@@ -157,7 +157,7 @@ Backends and filters depend on metadata targets, so changes to `derive_target` m
 
 Most root-package hot paths do not return errors. Invalid configuration or violated invariants abort, such as duplicate object keys, an out-of-range allocator seed, or allocator exhaustion. Runtime I/O, queue, and export failures belong to backend packages.
 
-User errors inside span callbacks are not swallowed. `with_span` only marks the span as error or cancelled and then re-raises the original error.
+User errors inside span callbacks are not swallowed. `with_span` marks the span as an error and re-raises the original error. Cancellation closes the span with `Cancelled` during deferred cleanup.
 
 ## Maintenance Notes
 

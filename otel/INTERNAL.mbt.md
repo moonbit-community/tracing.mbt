@@ -171,7 +171,7 @@ Its error semantics match the `jsonl` and `logfmt` backends:
 - If the user callback succeeds and shutdown fails, the shutdown error is raised.
 - If the user callback fails and shutdown succeeds, the user error is raised.
 - If the user callback fails and shutdown also fails with an `OtelRuntimeError`, `UserAndShutdownFailed` is raised.
-- If the user callback is cancelled, best-effort shutdown is attempted and cancellation is re-raised.
+- If the user callback is cancelled, deferred cleanup attempts best-effort shutdown before cancellation propagates.
 
 `with_global_otel_tracer` obtains a tracer from the OpenTelemetry global provider and delegates to `with_otel_tracer`. Instrumentation name, version, schema URL, and attributes are forwarded to `@global.tracer`.
 

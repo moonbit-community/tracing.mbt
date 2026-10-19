@@ -202,8 +202,9 @@ async test "with_span classifies cancellation and cleanup errors" {
   let result : Result[Unit?, _] = result_of(() => {
     @async.with_timeout_opt(10, () => {
       failed_ctx.with_span(Info, "cleanup-error", _ctx => {
-        @async.sleep(100) catch {
-          _ => raise TestErr
+        match @async.handle_cancellation(() => @async.sleep(100)) {
+          None => raise TestErr
+          Some(_) => ()
         }
       })
     })
