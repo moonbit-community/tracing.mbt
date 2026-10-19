@@ -709,7 +709,6 @@ async fn[X] OtelRuntime::with_control_gate(
 async fn OtelRuntime::await_ack(self : OtelRuntime, id : Int64) -> Unit {
   for ;; {
     let ack = self.ack_queue.get() catch {
-      err if @async.is_cancellation_error(err) => raise err
       _ => raise ChannelClosed("ack queue closed")
     }
     match ack {
@@ -947,17 +946,14 @@ pub async fn OtelRuntime::shutdown(self : OtelRuntime) -> Unit {
 }
 
 ///|
-async fn protected_shutdown(runtime : OtelRuntime) -> Result[Unit, Error] {
-  let result : Result[Unit, Error]? = @async.protect_from_cancel(() => {
+async fn protected_shutdown(runtime : OtelRuntime) -> Unit {
+  let result : Unit? = @async.protect_from_cancel(() => {
     @async.with_timeout_opt(runtime.shutdown_timeout_ms, () => {
-      Ok(runtime.shutdown()) catch {
-        err => Err(err)
-      }
+      runtime.shutdown()
     })
   })
-  match result {
-    Some(shutdown_result) => shutdown_result
-    None => Err(TimedOut(shutdown_timeout_message(runtime.shutdown_timeout_ms)))
+  if result is None {
+    raise TimedOut(shutdown_timeout_message(runtime.shutdown_timeout_ms))
   }
 }
 
@@ -971,11 +967,11 @@ async fn protected_shutdown(runtime : OtelRuntime) -> Result[Unit, Error] {
 /// `OtelRuntimeError`, the helper raises
 /// `OtelHelperError::UserAndShutdownFailed`.
 ///
-/// Cancellation errors from `f` are re-raised after a best-effort protected
-/// shutdown attempt.
+/// Cancellation of `f` triggers a best-effort protected shutdown attempt
+/// before cancellation propagates.
 pub async fn[X] with_otel_tracer(
   tracer : @trace.Tracer,
-  options? : OtelOptions = Default::default(),
+  options~ : OtelOptions = Default::default(),
   f : async (@tracing.TraceContext) -> X,
 ) -> X {
   @async.with_task_group(group => {
@@ -984,25 +980,22 @@ pub async fn[X] with_otel_tracer(
       runtime.dispatch(),
       @tracing.TraceIdAllocator::new(),
     )
-    try f(ctx) catch {
-      err if @async.is_cancellation_error(err) => {
-        ignore(protected_shutdown(runtime))
-        raise err
+    let mut shutdown_error : Error? = None
+    let result : Result[X, Error] = {
+      defer (protected_shutdown(runtime) catch {
+        err => shutdown_error = Some(err)
+      })
+      Ok(f(ctx)) catch {
+        err => Err(err)
       }
-      err =>
-        match protected_shutdown(runtime) {
-          Ok(_) => raise err
-          Err(shutdown_err) =>
-            match runtime_error_of_error(shutdown_err) {
-              Some(runtime_err) => raise UserAndShutdownFailed(err, runtime_err)
-              None => raise shutdown_err
-            }
-        }
-    } noraise {
-      value =>
-        match protected_shutdown(runtime) {
-          Ok(_) => value
-          Err(err) => raise err
+    }
+    match (result, shutdown_error) {
+      (Ok(value), None) => value
+      (Err(err), None) | (Ok(_), Some(err)) => raise err
+      (Err(err), Some(shutdown_err)) =>
+        match runtime_error_of_error(shutdown_err) {
+          Some(runtime_err) => raise UserAndShutdownFailed(err, runtime_err)
+          None => raise shutdown_err
         }
     }
   })

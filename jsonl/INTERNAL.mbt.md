@@ -116,7 +116,7 @@ If the callback returns normally, the helper performs protected shutdown. If shu
 
 If the callback raises a normal error, the helper still attempts protected shutdown. If shutdown succeeds, it re-raises the user error. If shutdown also fails with a recognizable `JsonRuntimeError`, it raises `UserAndShutdownFailed(user_err, runtime_err)` so neither failure is lost.
 
-If the callback is cancelled, the helper performs best-effort protected shutdown and re-raises the cancellation error. Cancellation is not wrapped in `UserAndShutdownFailed`.
+If the callback is cancelled, deferred cleanup performs best-effort protected shutdown before cancellation propagates. Cancellation is not wrapped in `UserAndShutdownFailed`.
 
 Protected shutdown uses `@async.protect_from_cancel` and wraps the whole attempt in `shutdown_timeout_ms`, preventing outer cancellation from leaving the background task hanging indefinitely.
 

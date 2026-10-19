@@ -189,6 +189,22 @@ async test "OtelRuntime exports span lifecycle records to OpenTelemetry" {
 }
 
 ///|
+async test "with_otel_tracer exports cancelled spans before returning" {
+  let (exporter, tracer) = test_tracer()
+  let result = @async.with_timeout_opt(10, () => {
+    @otel.with_otel_tracer(tracer, ctx => {
+      ctx.with_span(Info, "cancelled-span", _ctx => @async.sleep(100))
+    })
+  })
+  assert_eq(result, None)
+  let spans = exporter.finished_spans()
+  assert_eq(spans.length(), 1)
+  let span = exported_span(spans, "cancelled-span")
+  assert_true(span.status.code is Error)
+  assert_eq(span.status.description, Some("cancelled"))
+}
+
+///|
 async test "OtelRuntime links follows-from and exposes current OpenTelemetry context" {
   let (exporter, tracer) = test_tracer()
   let runtime = @async.with_task_group(group => {

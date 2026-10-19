@@ -205,17 +205,16 @@ async fn[X] run_started_span(
   f : async (TraceContext) -> X,
 ) -> X {
   guard handle.span_context() is Some(_) else { return f(filtered_ctx) }
-  try f(child_ctx) catch {
-    err if @async.is_cancellation_error(err) => {
-      ignore(handle.close(status=Cancelled))
-      raise err
-    }
-    err => {
+  defer (if @async.is_being_cancelled() {
+    ignore(handle.close(status=Cancelled))
+  })
+  let result : Result[X, Error] = Ok(f(child_ctx)) catch { err => Err(err) }
+  match result {
+    Err(err) => {
       ignore(handle.close(status=Error, error=err.to_string()))
       raise err
     }
-  } noraise {
-    value => {
+    Ok(value) => {
       ignore(handle.close())
       value
     }
@@ -424,7 +423,7 @@ pub fn TraceContext::span(
 /// Run `f` inside a child span when the callsite is enabled.
 ///
 /// On normal return an enabled span ends with `SpanStatus::Ok`.
-/// When `f` fails with a cancellation error, an enabled span ends with
+/// When `f` is cancelled, an enabled span ends with
 /// `SpanStatus::Cancelled`.
 /// Any other error ends an enabled span with `SpanStatus::Error`, records
 /// `err.to_string()` as the end error text, and then re-raises the original
@@ -438,8 +437,8 @@ pub async fn[X] TraceContext::with_span(
   level : Level,
   name : String,
   target? : String,
-  fields? : ArrayView[Field] = [],
-  follows_from? : ArrayView[SpanContext] = [],
+  fields~ : ArrayView[Field] = [],
+  follows_from~ : ArrayView[SpanContext] = [],
   loc~ : SourceLoc,
   f : async (TraceContext) -> X,
 ) -> X {
