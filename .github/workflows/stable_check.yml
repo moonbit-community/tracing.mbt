@@ -1,0 +1,42 @@
+name: check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: moon version
+        run: moon version --all
+
+      - name: moon update
+        run: moon update
+
+      - name: moon check
+        run: |
+          moon check --deny-warn --target wasm
+          moon check --deny-warn --target native
+
+      - name: format diff
+        run: |
+          moon fmt
+          git diff --exit-code
+
+      - name: moon test
+        run: |
+          moon test --target wasm
+          moon test --target native
