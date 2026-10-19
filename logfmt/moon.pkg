@@ -1,7 +1,5 @@
 import {
   "moonbitlang/core/encoding/base64",
-  "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/set",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
   "moonbitlang/async/io",
@@ -11,8 +9,7 @@ import {
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/utf8",
 } for "test"
-
-warnings = "-29"
 
 supported_targets = "wasm+native"

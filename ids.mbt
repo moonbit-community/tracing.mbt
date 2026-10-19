@@ -24,7 +24,7 @@ let allocator_entropy_nonce : Ref[UInt64] = Ref(0UL)
 
 ///|
 fn bytes_to_hex(bytes : BytesView) -> String {
-  let builder = StringBuilder::new(size_hint=bytes.length() * 2)
+  let builder = StringBuilder(size_hint=bytes.length() * 2)
   for byte in bytes {
     builder.write_string(byte.to_hex())
   }
@@ -32,7 +32,7 @@ fn bytes_to_hex(bytes : BytesView) -> String {
 }
 
 ///|
-fn parse_hex_bytes(hex : StringView, expected_length : Int) -> Bytes? {
+fn parse_hex_bytes(hex : StringView, expected_length : Int32) -> Bytes? {
   guard hex.length() == expected_length * 2 else { return None }
   let chars = hex.to_array()
   let bytes : Array[Byte] = []
@@ -49,12 +49,32 @@ fn parse_hex_bytes(hex : StringView, expected_length : Int) -> Bytes? {
 ///|
 /// Trace flags carried by W3C `traceparent`.
 pub struct TraceFlags {
-  priv raw : UInt
+  priv raw : UInt32
 } derive(Eq, Compare, Hash, Debug)
 
 ///|
-pub fn TraceFlags::new(raw : UInt) -> TraceFlags {
-  { raw: raw & 0xFFU }
+#deprecated
+#doc(hidden)
+pub extend TraceFlags with Eq::{not_equal, equal}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend TraceFlags with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend TraceFlags with Hash::{hash, hash_combine}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend TraceFlags with Debug::{to_repr}
+
+///|
+pub fn TraceFlags::new(raw : UInt32) -> TraceFlags {
+  { raw: raw & 0xFFU, }
 }
 
 ///|
@@ -73,7 +93,7 @@ pub fn TraceFlags::is_sampled(self : TraceFlags) -> Bool {
 }
 
 ///|
-pub fn TraceFlags::to_uint(self : TraceFlags) -> UInt {
+pub fn TraceFlags::to_uint(self : TraceFlags) -> UInt32 {
   self.raw
 }
 
@@ -84,10 +104,40 @@ pub struct TraceId {
 } derive(Eq, Compare, Hash)
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend TraceId with Eq::{not_equal, equal}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend TraceId with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend TraceId with Hash::{hash, hash_combine}
+
+///|
 /// Identifier for a single span within a trace.
 pub struct SpanId {
   priv raw : Bytes
 } derive(Eq, Compare, Hash)
+
+///|
+#deprecated
+#doc(hidden)
+pub extend SpanId with Eq::{not_equal, equal}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend SpanId with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+#deprecated
+#doc(hidden)
+pub extend SpanId with Hash::{hash, hash_combine}
 
 ///|
 /// Explicit allocator for root trace identifiers.
@@ -105,12 +155,12 @@ pub struct TraceIdAllocator {
 
 ///|
 fn TraceId::invalid() -> TraceId {
-  { raw: zero16 }
+  { raw: zero16, }
 }
 
 ///|
 fn SpanId::invalid() -> SpanId {
-  { raw: zero8 }
+  { raw: zero8, }
 }
 
 ///|
@@ -159,7 +209,7 @@ pub fn TraceId::from_hex(hex : StringView) -> TraceId? {
 ///|
 pub fn TraceId::from_bytes(bytes : BytesView) -> TraceId? {
   guard bytes.length() == 16 else { return None }
-  Some({ raw: bytes.to_owned() })
+  Some({ raw: bytes.to_owned(), })
 }
 
 ///|
@@ -183,7 +233,7 @@ pub fn SpanId::from_hex(hex : StringView) -> SpanId? {
 ///|
 pub fn SpanId::from_bytes(bytes : BytesView) -> SpanId? {
   guard bytes.length() == 8 else { return None }
-  Some({ raw: bytes.to_owned() })
+  Some({ raw: bytes.to_owned(), })
 }
 
 ///|
@@ -198,12 +248,12 @@ pub fn SpanId::to_hex(self : SpanId) -> String {
 
 ///|
 fn TraceId::from_local_raw(raw : Int64) -> TraceId {
-  { raw: zero8 + raw.reinterpret_as_uint64().to_be_bytes() }
+  { raw: zero8 + raw.reinterpret_as_uint64().to_be_bytes(), }
 }
 
 ///|
 fn SpanId::from_local_raw(raw : Int64) -> SpanId {
-  { raw: raw.reinterpret_as_uint64().to_be_bytes() }
+  { raw: raw.reinterpret_as_uint64().to_be_bytes(), }
 }
 
 ///|
@@ -221,7 +271,7 @@ fn TraceId::from_random(rand : @random.Rand) -> TraceId {
 ///|
 fn SpanId::from_random(rand : @random.Rand) -> SpanId {
   for ;; {
-    let span_id : SpanId = { raw: rand.uint64().to_be_bytes() }
+    let span_id : SpanId = { raw: rand.uint64().to_be_bytes(), }
     if !span_id.is_zero() {
       return span_id
     }
@@ -234,9 +284,19 @@ pub impl Debug for TraceId with fn to_repr(self) {
 }
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend TraceId with Debug::{to_repr}
+
+///|
 pub impl Debug for SpanId with fn to_repr(self) {
   Repr::literal(self.to_hex())
 }
+
+///|
+#deprecated
+#doc(hidden)
+pub extend SpanId with Debug::{to_repr}
 
 ///|
 pub impl Show for TraceId with fn output(self, logger) {
@@ -244,13 +304,23 @@ pub impl Show for TraceId with fn output(self, logger) {
 }
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend TraceId with Show::{to_string, output}
+
+///|
 pub impl Show for SpanId with fn output(self, logger) {
   logger.write_string(self.to_hex())
 }
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend SpanId with Show::{to_string, output}
+
+///|
 pub fn TraceIdAllocator::new() -> TraceIdAllocator {
-  { state: Random(@random.Rand::chacha8(seed=next_allocator_seed())) }
+  { state: Random(@random.Rand::chacha8(seed=next_allocator_seed())), }
 }
 
 ///|
@@ -263,7 +333,7 @@ pub fn TraceIdAllocator::new_seeded(seed : UInt64) -> TraceIdAllocator {
   guard seed < max_int64_u64 else {
     abort("TraceIdAllocator seed must be less than Int64 max")
   }
-  { state: Counter(Ref(seed.reinterpret_as_int64())) }
+  { state: Counter(Ref(seed.reinterpret_as_int64())), }
 }
 
 ///|

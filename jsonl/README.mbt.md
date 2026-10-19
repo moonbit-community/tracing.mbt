@@ -45,7 +45,7 @@ struct JsonlReadmeWriter {
 
 ///|
 fn JsonlReadmeWriter::new() -> JsonlReadmeWriter {
-  { output: Ref(StringBuilder::new()) }
+  { output: Ref(StringBuilder()), }
 }
 
 ///|
@@ -101,7 +101,7 @@ shutdown failures directly. If both the callback and shutdown fail, it raises
 async test "with_json_writer writes JSON lines" {
   let writer = JsonlReadmeWriter::new()
 
-  with_json_writer(writer, ctx => {
+  @jsonl.with_json_writer(writer, ctx => {
     ctx.event(Info, "ready", message="booting", fields=[
       @tracing.field("worker", 1),
     ])
@@ -185,7 +185,7 @@ relationships are emitted as `span_link`.
 async test "manual span operations become dedicated JSON line kinds" {
   let writer = JsonlReadmeWriter::new()
 
-  with_json_writer(writer, ctx => {
+  @jsonl.with_json_writer(writer, ctx => {
     let (cause_handle, cause_ctx) = ctx.span(Info, "cache_lookup")
     let cause = cause_ctx.current_span().unwrap()
     ignore(cause_handle.close())
@@ -252,7 +252,7 @@ async test "JsonRuntime supports explicit flush shutdown and stats" {
   let writer = JsonlReadmeWriter::new()
 
   let stats = @async.with_task_group(group => {
-    let runtime = JsonRuntime::start_in(group, writer)
+    let runtime = @jsonl.JsonRuntime::start_in(group, writer)
     let ctx = @tracing.TraceContext::root(
       runtime.dispatch(),
       @tracing.TraceIdAllocator::new_seeded(0UL),

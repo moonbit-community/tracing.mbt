@@ -40,7 +40,7 @@ struct LogfmtReadmeWriter {
 
 ///|
 fn LogfmtReadmeWriter::new() -> LogfmtReadmeWriter {
-  { output: Ref(StringBuilder::new()) }
+  { output: Ref(StringBuilder()), }
 }
 
 ///|
@@ -85,7 +85,7 @@ shutdown failures directly. If both the callback and shutdown fail, it raises
 async test "with_logfmt_writer writes logfmt lines" {
   let writer = LogfmtReadmeWriter::new()
 
-  with_logfmt_writer(writer, ctx => {
+  @logfmt.with_logfmt_writer(writer, ctx => {
     ctx.event(Info, "ready", message="booting", fields=[
       @tracing.field("worker", 1),
     ])
@@ -120,7 +120,7 @@ possible, while strings, bytes, arrays, and objects are quoted as logfmt text.
 async test "logfmt keeps complex fields on the line" {
   let writer = LogfmtReadmeWriter::new()
 
-  with_logfmt_writer(writer, ctx => {
+  @logfmt.with_logfmt_writer(writer, ctx => {
     ctx.event(Info, "complex", message="line\n\"quoted\"", fields=[
       @tracing.field("user id/x", "req 1"),
       @tracing.field("bytes", b"hi"),
@@ -151,7 +151,7 @@ async test "LogfmtRuntime flushes span links and late fields" {
   let writer = LogfmtReadmeWriter::new()
 
   @async.with_task_group(group => {
-    let runtime = LogfmtRuntime::start_in(group, writer)
+    let runtime = @logfmt.LogfmtRuntime::start_in(group, writer)
     let ctx = @tracing.TraceContext::root(
       runtime.dispatch(),
       @tracing.TraceIdAllocator::new_seeded(0UL),

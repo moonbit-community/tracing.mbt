@@ -12,30 +12,30 @@ pub struct OtelOptions {
   /// When this queue is full, newly closed spans cannot be handed to the
   /// worker. The record is dropped and `OtelStats.dropped_records` is
   /// incremented.
-  queue_capacity : Int
+  queue_capacity : Int32
   /// Capacity of the dedicated control queue used by `flush` and `shutdown`.
   ///
   /// Control messages are serialized by the runtime, so the default is small.
   /// Increase it only when embedding the runtime behind additional concurrent
   /// control paths.
-  control_queue_capacity : Int
+  control_queue_capacity : Int32
   /// Capacity of the acknowledgement queue paired with the control queue.
   ///
   /// The background worker writes one acknowledgement per accepted control
   /// command. The default capacity is intended to match the small control
   /// queue.
-  ack_queue_capacity : Int
+  ack_queue_capacity : Int32
   /// Timeout used by `OtelRuntime::flush` and `OtelRuntime::shutdown`.
   ///
   /// The timeout covers waiting for the background worker to acknowledge the
   /// command. It includes time spent ending queued OpenTelemetry spans.
-  command_timeout_ms : Int
+  command_timeout_ms : Int32
   /// Timeout used by helper shutdown on scope exit.
   ///
   /// `with_otel_tracer` and `with_global_otel_tracer` protect shutdown from
   /// cancellation and bound the whole protected shutdown attempt with this
   /// timeout.
-  shutdown_timeout_ms : Int
+  shutdown_timeout_ms : Int32
   /// Attach tracing target as a span/event attribute named `target`.
   with_target : Bool
   /// Attach tracing level as a span/event attribute named `level`.
@@ -65,13 +65,18 @@ pub struct OtelStats {
   /// Records can be dropped after shutdown starts, when the span-end queue is
   /// full, or when a tracing callback arrives after the runtime has stopped
   /// accepting work.
-  dropped_records : Int
+  dropped_records : Int32
   /// Current count of started spans that have not been closed yet.
   ///
   /// On shutdown this becomes the number of spans that were started through the
   /// bridge but never closed by tracing code.
-  unclosed_spans : Int
+  unclosed_spans : Int32
 } derive(Debug)
+
+///|
+#deprecated
+#doc(hidden)
+pub extend OtelStats with Debug::{to_repr}
 
 ///|
 /// Errors raised by `OtelRuntime::flush` and `OtelRuntime::shutdown`.
@@ -84,6 +89,11 @@ pub suberror OtelRuntimeError {
 } derive(Debug)
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend OtelRuntimeError with Debug::{to_repr}
+
+///|
 /// Errors raised by helper functions when user code and shutdown both fail.
 ///
 /// The helper preserves both failures: the first value is the original user
@@ -93,6 +103,11 @@ pub suberror OtelHelperError {
   /// User code raised an error and the protected runtime shutdown also failed.
   UserAndShutdownFailed(Error, OtelRuntimeError)
 } derive(Debug)
+
+///|
+#deprecated
+#doc(hidden)
+pub extend OtelHelperError with Debug::{to_repr}
 
 ///|
 priv enum ControlCommand {
@@ -127,9 +142,9 @@ priv struct OtelSubscriber {
   end_queue : @aqueue.Queue[@trace.Span]
   wake_queue : @aqueue.Queue[Unit]
   accepting : Ref[Bool]
-  dropped_records : Ref[Int]
+  dropped_records : Ref[Int32]
   span_states : Ref[Map[@tracing.SpanContext, OtelSpanState]]
-  unclosed_spans : Ref[Int]
+  unclosed_spans : Ref[Int32]
 }
 
 ///|
@@ -152,22 +167,27 @@ pub impl Default for OtelOptions with fn default() {
 }
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend OtelOptions with Default::{default}
+
+///|
 /// Create OpenTelemetry bridge options explicitly.
 ///
 /// All parameters are optional and use the `Default` implementation. The
 /// constructor does not validate values; validation happens in
 /// `OtelRuntime::start_in`, where non-positive capacities and timeouts abort.
 pub fn OtelOptions::new(
-  queue_capacity? : Int = 8192,
-  control_queue_capacity? : Int = 8,
-  ack_queue_capacity? : Int = 8,
-  command_timeout_ms? : Int = 2000,
-  shutdown_timeout_ms? : Int = 2000,
-  with_target? : Bool = true,
-  with_level? : Bool = false,
-  with_location? : Bool = false,
-  error_events_to_status? : Bool = true,
-  error_events_to_exceptions? : Bool = true,
+  queue_capacity~ : Int32 = 8192,
+  control_queue_capacity~ : Int32 = 8,
+  ack_queue_capacity~ : Int32 = 8,
+  command_timeout_ms~ : Int32 = 2000,
+  shutdown_timeout_ms~ : Int32 = 2000,
+  with_target~ : Bool = true,
+  with_level~ : Bool = false,
+  with_location~ : Bool = false,
+  error_events_to_status~ : Bool = true,
+  error_events_to_exceptions~ : Bool = true,
 ) -> OtelOptions {
   {
     queue_capacity,
@@ -265,7 +285,7 @@ fn append_metadata_attributes(
 ///|
 fn attributes_from_fields(
   fields : ArrayView[@tracing.Field],
-  skip_special? : Bool = true,
+  skip_special~ : Bool = true,
 ) -> Array[@common.KeyValue] {
   let attributes : Array[@common.KeyValue] = []
   for field in fields {
@@ -349,11 +369,11 @@ fn extract_span_specials(fields : ArrayView[@tracing.Field]) -> SpanSpecials {
       _ => ()
     }
   }
-  { name, kind, status_code, status_description }
+  { name, kind, status_code, status_description, }
 }
 
 ///|
-fn status_priority(code : @trace.StatusCode) -> Int {
+fn status_priority(code : @trace.StatusCode) -> Int32 {
   match code {
     Unset => 0
     Error => 1
@@ -469,7 +489,7 @@ impl @tracing.Subscriber for OtelSubscriber with fn on_span_start(self, record) 
     builder,
     self.parent_context(record.parent),
   )
-  let state = { span, context: span.context(), status: Ref(None) }
+  let state = { span, context: span.context(), status: Ref(None), }
   self.span_states.val[record.span] = state
   self.refresh_unclosed()
   match specials.status_code {
@@ -608,7 +628,7 @@ async fn worker_loop(
   ack_queue : @aqueue.Queue[RuntimeAck],
   wake_queue : @aqueue.Queue[Unit],
   span_states : Ref[Map[@tracing.SpanContext, OtelSpanState]],
-  unclosed_spans : Ref[Int],
+  unclosed_spans : Ref[Int32],
 ) -> Unit {
   for ;; {
     wake_queue.get() catch {
@@ -653,7 +673,7 @@ fn next_command_id(counter : Ref[Int64]) -> Int64 {
 }
 
 ///|
-fn shutdown_timeout_message(timeout_ms : Int) -> String {
+fn shutdown_timeout_message(timeout_ms : Int32) -> String {
   "shutdown timed out after \{timeout_ms.to_string()}ms"
 }
 
@@ -686,12 +706,12 @@ pub struct OtelRuntime {
   priv wake_queue : @aqueue.Queue[Unit]
   priv control_gate : @async.Semaphore
   priv next_command_id : Ref[Int64]
-  priv dropped_records : Ref[Int]
-  priv unclosed_spans : Ref[Int]
+  priv dropped_records : Ref[Int32]
+  priv unclosed_spans : Ref[Int32]
   priv accepting : Ref[Bool]
   priv shutdown_state : Ref[ShutdownState]
-  priv command_timeout_ms : Int
-  priv shutdown_timeout_ms : Int
+  priv command_timeout_ms : Int32
+  priv shutdown_timeout_ms : Int32
   priv span_states : Ref[Map[@tracing.SpanContext, OtelSpanState]]
 }
 
@@ -767,7 +787,7 @@ async fn OtelRuntime::await_shutdown_ack(
 pub fn[X] OtelRuntime::start_in(
   group : @async.TaskGroup[X],
   tracer : @trace.Tracer,
-  options? : OtelOptions = Default::default(),
+  options~ : OtelOptions = Default::default(),
 ) -> OtelRuntime {
   guard options.queue_capacity > 0 else {
     abort("OtelOptions.queue_capacity must be positive")
@@ -1009,10 +1029,10 @@ pub async fn[X] with_otel_tracer(
 /// so this helper has the same scoped-runtime and shutdown behavior.
 pub async fn[X] with_global_otel_tracer(
   name : String,
-  version? : String? = None,
-  schema_url? : String? = None,
-  attributes? : ArrayView[@common.KeyValue] = [],
-  options? : OtelOptions = Default::default(),
+  version~ : String? = None,
+  schema_url~ : String? = None,
+  attributes~ : ArrayView[@common.KeyValue] = [],
+  options~ : OtelOptions = Default::default(),
   f : async (@tracing.TraceContext) -> X,
 ) -> X {
   with_otel_tracer(

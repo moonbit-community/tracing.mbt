@@ -2,15 +2,19 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/debug",
   "moonbitlang/core/random",
-  "moonbitlang/core/string",
   "moonbitlang/async",
 }
 
 import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/string",
   "moonbitlang/async/io",
   "moonbit-community/tracing/jsonl",
 } for "test"
+
+import {
+  "moonbitlang/core/debug",
+} for "wbtest"
 
 supported_targets = "all"

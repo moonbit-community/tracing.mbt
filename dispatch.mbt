@@ -7,6 +7,11 @@ pub(all) enum Filter {
 } derive(Debug)
 
 ///|
+#deprecated
+#doc(hidden)
+pub extend Filter with Debug::{to_repr}
+
+///|
 priv struct Lane {
   filter : Filter?
   subscriber : &Subscriber
@@ -61,13 +66,13 @@ pub struct Dispatch {
 ///|
 /// Create a dispatch that never enables any event or span.
 pub fn Dispatch::noop() -> Dispatch {
-  { lanes: [] }
+  { lanes: [], }
 }
 
 ///|
 /// Create a dispatch with a single unfiltered subscriber lane.
 pub fn Dispatch::from_subscriber(subscriber : &Subscriber) -> Dispatch {
-  { lanes: [{ filter: None, subscriber }] }
+  { lanes: [{ filter: None, subscriber, }], }
 }
 
 ///|
@@ -91,7 +96,7 @@ pub fn Dispatch::filtered(self : Dispatch, filter : Filter) -> Dispatch {
       Some(existing) => Some(AndFilter(existing, filter))
       None => Some(filter)
     }
-    lanes.push({ filter, subscriber: lane.subscriber })
+    lanes.push({ filter, subscriber: lane.subscriber, })
   }
   { lanes, }
 }

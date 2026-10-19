@@ -38,18 +38,18 @@ pub suberror OtelRuntimeError {
 
 // Types and methods
 pub struct OtelOptions {
-  queue_capacity : Int
-  control_queue_capacity : Int
-  ack_queue_capacity : Int
-  command_timeout_ms : Int
-  shutdown_timeout_ms : Int
+  queue_capacity : Int32
+  control_queue_capacity : Int32
+  ack_queue_capacity : Int32
+  command_timeout_ms : Int32
+  shutdown_timeout_ms : Int32
   with_target : Bool
   with_level : Bool
   with_location : Bool
   error_events_to_status : Bool
   error_events_to_exceptions : Bool
 }
-pub fn OtelOptions::new(queue_capacity? : Int, control_queue_capacity? : Int, ack_queue_capacity? : Int, command_timeout_ms? : Int, shutdown_timeout_ms? : Int, with_target? : Bool, with_level? : Bool, with_location? : Bool, error_events_to_status? : Bool, error_events_to_exceptions? : Bool) -> Self
+pub fn OtelOptions::new(queue_capacity? : Int32, control_queue_capacity? : Int32, ack_queue_capacity? : Int32, command_timeout_ms? : Int32, shutdown_timeout_ms? : Int32, with_target? : Bool, with_level? : Bool, with_location? : Bool, error_events_to_status? : Bool, error_events_to_exceptions? : Bool) -> Self
 pub impl Default for OtelOptions
 
 pub struct OtelRuntime {
@@ -63,8 +63,8 @@ pub fn[X] OtelRuntime::start_in(@async.TaskGroup[X], @trace.Tracer, options? : O
 pub fn OtelRuntime::stats(Self) -> OtelStats
 
 pub struct OtelStats {
-  dropped_records : Int
-  unclosed_spans : Int
+  dropped_records : Int32
+  unclosed_spans : Int32
 } derive(@debug.Debug)
 
 // Type aliases

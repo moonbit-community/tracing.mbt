@@ -1,6 +1,4 @@
 import {
-  "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/set",
   "moonbitlang/async",
   "moonbitlang/async/aqueue",
   "moonbitlang/async/io",
@@ -10,6 +8,7 @@ import {
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
 } for "test"
 
