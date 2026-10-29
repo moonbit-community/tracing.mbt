@@ -9,10 +9,10 @@ import {
 
 readme = "README.mbt.md"
 
-repository = ""
+repository = "https://github.com/moonbit-community/tracing.mbt"
 
 license = "Apache-2.0"
 
 keywords = [ ]
 
-description = ""
+description = "Structured tracing with explicit context propagation."
